@@ -90,11 +90,11 @@ export const SystemSettingsView: React.FC = () => {
       {/* Main Settings Card with Tabs */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         {/* Navigation Tabs */}
-        <div className="flex border-b border-slate-200 bg-slate-50/70 px-4 sm:px-6">
+        <div className="flex border-b border-slate-200 bg-slate-50/70 px-4 sm:px-6 overflow-x-auto max-w-full">
           <button
             type="button"
             onClick={() => setActiveTab('general')}
-            className={`py-3.5 px-4 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 flex items-center gap-2 ${
+            className={`py-3.5 px-4 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 flex items-center gap-2 shrink-0 whitespace-nowrap ${
               activeTab === 'general'
                 ? 'border-slate-900 text-slate-900'
                 : 'border-transparent text-slate-400 hover:text-slate-700'
@@ -107,7 +107,7 @@ export const SystemSettingsView: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('security')}
-            className={`py-3.5 px-4 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 flex items-center gap-2 ${
+            className={`py-3.5 px-4 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 flex items-center gap-2 shrink-0 whitespace-nowrap ${
               activeTab === 'security'
                 ? 'border-slate-900 text-slate-900'
                 : 'border-transparent text-slate-400 hover:text-slate-700'
@@ -120,7 +120,7 @@ export const SystemSettingsView: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('notifications')}
-            className={`py-3.5 px-4 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 flex items-center gap-2 ${
+            className={`py-3.5 px-4 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 flex items-center gap-2 shrink-0 whitespace-nowrap ${
               activeTab === 'notifications'
                 ? 'border-slate-900 text-slate-900'
                 : 'border-transparent text-slate-400 hover:text-slate-700'
@@ -134,7 +134,7 @@ export const SystemSettingsView: React.FC = () => {
             <button
               type="button"
               onClick={() => setActiveTab('danger')}
-              className={`py-3.5 px-4 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 flex items-center gap-2 ${
+              className={`py-3.5 px-4 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 flex items-center gap-2 shrink-0 whitespace-nowrap ${
                 activeTab === 'danger'
                   ? 'border-rose-600 text-rose-600 bg-rose-50/40'
                   : 'border-transparent text-rose-500 hover:text-rose-700'

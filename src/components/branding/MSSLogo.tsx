@@ -264,22 +264,22 @@ export const MSSLogo: React.FC<MSSLogoProps> = ({
 
   if (mode === 'document-header') {
     return (
-      <div className={`flex items-center justify-between border-b-2 border-red-600 pb-4 ${className}`}>
-        <div className="flex items-center gap-4">
-          {badgeElement}
-          <div>
-            <h2 className="text-xl font-black tracking-tight text-slate-950 font-['Space_Grotesk'] leading-none">
+      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b-2 border-red-600 pb-4 min-w-0 max-w-full ${className}`}>
+        <div className="flex items-center gap-3.5 min-w-0">
+          <div className="shrink-0">{badgeElement}</div>
+          <div className="min-w-0">
+            <h2 className="text-lg sm:text-xl font-black tracking-tight text-slate-950 font-['Space_Grotesk'] leading-tight truncate">
               MOUNTAIN SECURITY SERVICES
             </h2>
-            <p className="text-xs font-bold text-red-600 tracking-wider uppercase mt-1">
-              Private Security & Guarding Company • Official License PPO-99482-SEC
+            <p className="text-[11px] sm:text-xs font-bold text-red-600 tracking-wider uppercase mt-0.5 truncate">
+              Private Security & Guarding Company • License PPO-99482-SEC
             </p>
-            <p className="text-[11px] text-slate-600 mt-0.5 font-medium">
-              Faisalabad / Head Office • 24/7 Dispatch: +92 300 1234567 • info@mountainsecurity.com
+            <p className="text-[10px] sm:text-[11px] text-slate-600 mt-0.5 font-medium truncate">
+              Head Office • 24/7 Dispatch: +92 300 1234567 • info@mountainsecurity.com
             </p>
           </div>
         </div>
-        <div className="text-right">
+        <div className="text-left sm:text-right shrink-0">
           <span className="inline-block px-3 py-1 bg-slate-950 text-white font-bold text-xs tracking-wider rounded border border-red-600/40">
             OFFICIAL ERP RECORD
           </span>

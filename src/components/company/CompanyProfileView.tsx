@@ -81,9 +81,11 @@ export const CompanyProfileView: React.FC = () => {
       {/* Main Corporate Letterhead / Dossier Card */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-6 sm:p-8 space-y-8">
         {/* Document Header with MSS Official Logo */}
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6 pb-6 border-b border-slate-200">
-          <MSSLogo mode="document-header" />
-          <div className="text-left md:text-right space-y-1 text-xs text-slate-600">
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 pb-6 border-b border-slate-200 min-w-0 max-w-full">
+          <div className="min-w-0 flex-1">
+            <MSSLogo mode="document-header" />
+          </div>
+          <div className="text-left lg:text-right space-y-1 text-xs text-slate-600 shrink-0">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-bold font-mono">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
               State Licensed & Bonded

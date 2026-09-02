@@ -179,8 +179,8 @@ export const OperationsDashboard: React.FC = () => {
             View Complete Guards List →
           </button>
         </div>
-        <div className="divide-y divide-slate-100 overflow-x-auto">
-          <table className="w-full text-left text-xs">
+        <div className="divide-y divide-slate-100 overflow-x-auto max-w-full">
+          <table className="w-full text-left text-xs min-w-[700px]">
             <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono border-b border-slate-200">
               <tr>
                 <th className="px-6 py-3">Guard Code</th>

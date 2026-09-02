@@ -376,8 +376,8 @@ export function DataTable<T extends Record<string, any>>({
       </div>
 
       {/* Main Table Content */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+      <div className="overflow-x-auto max-w-full">
+        <table className="w-full text-left border-collapse min-w-[650px]">
           <thead>
             <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
               {visibleColumns.map((col) => {

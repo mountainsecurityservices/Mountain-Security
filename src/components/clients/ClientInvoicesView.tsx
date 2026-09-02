@@ -125,8 +125,8 @@ export const ClientInvoicesView: React.FC = () => {
 
       {/* Invoices Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+        <div className="overflow-x-auto max-w-full">
+          <table className="w-full text-left text-xs min-w-[750px]">
             <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono border-b border-slate-200">
               <tr>
                 <th className="px-6 py-3.5">Invoice #</th>
@@ -393,40 +393,42 @@ export const ClientInvoicesView: React.FC = () => {
               </div>
             </div>
 
-            <table className="w-full text-left text-xs border border-slate-200 rounded-xl overflow-hidden">
-              <thead className="bg-slate-100 text-[10px] font-bold uppercase font-mono text-slate-600">
-                <tr>
-                  <th className="p-3">Description</th>
-                  <th className="p-3 text-center">Qty</th>
-                  <th className="p-3 text-right">Unit Price</th>
-                  <th className="p-3 text-right">Total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {selectedInvoiceForPrint.items.map((item) => (
-                  <tr key={item.id}>
-                    <td className="p-3 font-semibold text-slate-900">{item.description}</td>
-                    <td className="p-3 text-center">{item.quantity}</td>
-                    <td className="p-3 text-right font-mono">{company.currencySymbol} {item.unitPrice.toLocaleString()}</td>
-                    <td className="p-3 text-right font-mono font-bold">{company.currencySymbol} {item.totalPrice.toLocaleString()}</td>
+            <div className="overflow-x-auto max-w-full border border-slate-200 rounded-xl">
+              <table className="w-full text-left text-xs min-w-[500px]">
+                <thead className="bg-slate-100 text-[10px] font-bold uppercase font-mono text-slate-600">
+                  <tr>
+                    <th className="p-3">Description</th>
+                    <th className="p-3 text-center">Qty</th>
+                    <th className="p-3 text-right">Unit Price</th>
+                    <th className="p-3 text-right">Total</th>
                   </tr>
-                ))}
-              </tbody>
-              <tfoot className="bg-slate-50 font-bold font-mono">
-                <tr>
-                  <td colSpan={3} className="p-3 text-right">Subtotal:</td>
-                  <td className="p-3 text-right">{company.currencySymbol} {selectedInvoiceForPrint.subtotal.toLocaleString()}</td>
-                </tr>
-                <tr>
-                  <td colSpan={3} className="p-3 text-right">Sales Tax / GST:</td>
-                  <td className="p-3 text-right">{company.currencySymbol} {selectedInvoiceForPrint.taxAmount.toLocaleString()}</td>
-                </tr>
-                <tr className="text-sm text-slate-900">
-                  <td colSpan={3} className="p-3 text-right font-black">Net Total Payable:</td>
-                  <td className="p-3 text-right text-red-600 font-black">{company.currencySymbol} {selectedInvoiceForPrint.totalAmount.toLocaleString()}</td>
-                </tr>
-              </tfoot>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {selectedInvoiceForPrint.items.map((item) => (
+                    <tr key={item.id}>
+                      <td className="p-3 font-semibold text-slate-900">{item.description}</td>
+                      <td className="p-3 text-center">{item.quantity}</td>
+                      <td className="p-3 text-right font-mono">{company.currencySymbol} {item.unitPrice.toLocaleString()}</td>
+                      <td className="p-3 text-right font-mono font-bold">{company.currencySymbol} {item.totalPrice.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-slate-50 font-bold font-mono">
+                  <tr>
+                    <td colSpan={3} className="p-3 text-right">Subtotal:</td>
+                    <td className="p-3 text-right">{company.currencySymbol} {selectedInvoiceForPrint.subtotal.toLocaleString()}</td>
+                  </tr>
+                  <tr>
+                    <td colSpan={3} className="p-3 text-right">Sales Tax / GST:</td>
+                    <td className="p-3 text-right">{company.currencySymbol} {selectedInvoiceForPrint.taxAmount.toLocaleString()}</td>
+                  </tr>
+                  <tr className="text-sm text-slate-900">
+                    <td colSpan={3} className="p-3 text-right font-black">Net Total Payable:</td>
+                    <td className="p-3 text-right text-red-600 font-black">{company.currencySymbol} {selectedInvoiceForPrint.totalAmount.toLocaleString()}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
 
             <div className="pt-4 border-t border-slate-200 flex items-center justify-between text-xs font-mono">
               <span className="text-slate-500">Payment Status: <strong>{selectedInvoiceForPrint.status}</strong></span>

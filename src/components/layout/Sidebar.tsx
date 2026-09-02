@@ -41,6 +41,7 @@ export const Sidebar: React.FC = () => {
     selectedFutureModule,
     setActiveTab,
     sidebarCollapsed,
+    setSidebarCollapsed,
     hasPermission,
     isSuperAdmin,
     futureModules,
@@ -67,13 +68,20 @@ export const Sidebar: React.FC = () => {
     return isSuperAdmin() || hasPermission(item.permission);
   };
 
+  const handleNavClick = (id: ActiveTab) => {
+    setActiveTab(id);
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setSidebarCollapsed(true);
+    }
+  };
+
   const renderNavButton = (item: NavItem) => {
     const isActive = activeTab === item.id;
     return (
       <button
         key={item.id}
         type="button"
-        onClick={() => setActiveTab(item.id)}
+        onClick={() => handleNavClick(item.id)}
         title={sidebarCollapsed ? item.label : undefined}
         className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
           isActive
@@ -90,20 +98,30 @@ export const Sidebar: React.FC = () => {
   };
 
   return (
-    <aside
-      className={`fixed inset-y-0 left-0 z-40 flex flex-col bg-slate-900 text-slate-300 transition-all duration-300 ease-in-out border-r border-slate-800 select-none no-print ${
-        sidebarCollapsed ? 'w-20' : 'w-64 sm:w-72'
-      }`}
-    >
-      {/* Brand Header */}
-      <div className="flex h-16 items-center justify-between px-4 border-b border-slate-800 bg-slate-950">
-        <MSSLogo
-          mode={sidebarCollapsed ? 'collapsed' : 'compact'}
-          light
-          onClick={() => setActiveTab('dashboard')}
-          className="cursor-pointer"
+    <>
+      {/* Mobile Backdrop for Sidebar Drawer */}
+      {!sidebarCollapsed && (
+        <div
+          className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-40 md:hidden"
+          onClick={() => setSidebarCollapsed(true)}
+          aria-hidden="true"
         />
-      </div>
+      )}
+
+      <aside
+        className={`fixed md:relative inset-y-0 left-0 z-40 md:z-30 shrink-0 flex flex-col bg-slate-900 text-slate-300 transition-all duration-300 ease-in-out border-r border-slate-800 select-none no-print ${
+          sidebarCollapsed ? 'hidden md:flex md:w-20' : 'flex w-64 sm:w-72 shadow-2xl md:shadow-none'
+        }`}
+      >
+        {/* Brand Header */}
+        <div className="flex h-16 items-center justify-between px-4 border-b border-slate-800 bg-slate-950">
+          <MSSLogo
+            mode={sidebarCollapsed ? 'collapsed' : 'compact'}
+            light
+            onClick={() => handleNavClick('dashboard')}
+            className="cursor-pointer"
+          />
+        </div>
 
       {/* Navigation List */}
       <div className="flex-1 overflow-y-auto px-3 py-3 space-y-4 scrollbar-thin scrollbar-thumb-slate-700">
@@ -400,5 +418,6 @@ export const Sidebar: React.FC = () => {
         )}
       </div>
     </aside>
+    </>
   );
 };

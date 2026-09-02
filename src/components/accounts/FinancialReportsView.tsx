@@ -115,8 +115,8 @@ export const FinancialReportsView: React.FC = () => {
         {/* 1. TRIAL BALANCE */}
         {reportType === 'TRIAL_BALANCE' && (
           <div className="space-y-4">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+            <div className="overflow-x-auto max-w-full">
+              <table className="w-full text-left text-xs min-w-[650px]">
                 <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono border-b border-slate-200">
                   <tr>
                     <th className="px-4 py-3">Account Code</th>
