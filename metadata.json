@@ -1,0 +1,6 @@
+{
+  "name": "Mountain Security Services - ERP Platform",
+  "description": "Enterprise Resource Planning and Security Management Foundation for Mountain Security Services (MSS).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
