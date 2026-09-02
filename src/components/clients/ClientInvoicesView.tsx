@@ -19,6 +19,9 @@ import {
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { ClientInvoice } from '../../types';
+import { RowActionButtons } from '../common/RowActionButtons';
+import { DeleteConfirmationModal } from '../common/DeleteConfirmationModal';
+import { RecordDetailModal } from '../common/RecordDetailModal';
 
 export const ClientInvoicesView: React.FC = () => {
   const {
@@ -27,15 +30,25 @@ export const ClientInvoicesView: React.FC = () => {
     clients,
     contracts,
     createClientInvoice,
+    updateClientInvoice,
+    deleteClientInvoice,
     recordInvoicePayment,
+    hasPermission,
+    addToast,
   } = useERP();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingInvoice, setEditingInvoice] = useState<ClientInvoice | null>(null);
+  const [deletingInvoice, setDeletingInvoice] = useState<ClientInvoice | null>(null);
+  const [detailInvoice, setDetailInvoice] = useState<ClientInvoice | null>(null);
   const [selectedInvoiceForPrint, setSelectedInvoiceForPrint] = useState<ClientInvoice | null>(null);
   const [paymentModalInvoice, setPaymentModalInvoice] = useState<ClientInvoice | null>(null);
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<string>('Bank Transfer');
+
+  const canEdit = hasPermission('INVOICES_EDIT') || hasPermission('CLIENTS_MANAGE') || hasPermission('ALL_ACCESS');
+  const canDelete = hasPermission('INVOICES_DELETE') || hasPermission('CLIENTS_MANAGE') || hasPermission('ALL_ACCESS');
 
   const [formData, setFormData] = useState({
     clientId: clients[0]?.id || '',
@@ -50,29 +63,100 @@ export const ClientInvoicesView: React.FC = () => {
   const taxAmount = (formData.subtotal * formData.taxRate) / 100;
   const totalAmount = formData.subtotal + taxAmount;
 
+  const handleOpenCreate = () => {
+    setEditingInvoice(null);
+    setFormData({
+      clientId: clients[0]?.id || '',
+      contractId: contracts[0]?.id || '',
+      invoiceDate: '2026-09-01',
+      dueDate: '2026-09-30',
+      billingMonth: 'September 2026',
+      subtotal: 516000,
+      taxRate: 5,
+    });
+    setIsCreateModalOpen(true);
+  };
+
+  const handleOpenEdit = (inv: ClientInvoice) => {
+    setEditingInvoice(inv);
+    const computedTaxRate = inv.subtotal > 0 ? Math.round((inv.taxAmount / inv.subtotal) * 100) : 5;
+    setFormData({
+      clientId: inv.clientId,
+      contractId: inv.contractId || '',
+      invoiceDate: inv.invoiceDate,
+      dueDate: inv.dueDate,
+      billingMonth: inv.billingMonth,
+      subtotal: inv.subtotal,
+      taxRate: computedTaxRate,
+    });
+    setIsCreateModalOpen(true);
+  };
+
   const handleSaveInvoice = (e: React.FormEvent) => {
     e.preventDefault();
-    const count = clientInvoices.length + 1;
-    const invoiceNumber = `INV-MSS-2026-${String(count).padStart(3, '0')}`;
     const selectedClient = clients.find((c) => c.id === formData.clientId) || clients[0];
 
-    createClientInvoice({
-      invoiceNumber,
-      clientId: selectedClient.id,
-      clientName: selectedClient.name,
-      contractId: formData.contractId,
-      invoiceDate: formData.invoiceDate,
-      dueDate: formData.dueDate,
-      billingMonth: formData.billingMonth,
-      subtotal: formData.subtotal,
-      taxAmount,
-      totalAmount,
-      status: 'ISSUED',
-      items: [
-        {
-          id: '1',
-          description: `Guard Deployment Services for ${formData.billingMonth}`,
-          quantity: 1,
+    if (editingInvoice) {
+      const res = updateClientInvoice(editingInvoice.id, {
+        clientId: selectedClient.id,
+        clientName: selectedClient.name,
+        contractId: formData.contractId,
+        invoiceDate: formData.invoiceDate,
+        dueDate: formData.dueDate,
+        billingMonth: formData.billingMonth,
+        subtotal: formData.subtotal,
+        taxAmount,
+        totalAmount,
+        outstandingAmount: totalAmount - (editingInvoice.paidAmount || 0),
+      });
+      if (res.success) {
+        addToast(`Invoice ${editingInvoice.invoiceNumber} updated successfully`, 'success');
+      } else {
+        addToast(res.error || 'Failed to update invoice', 'error');
+      }
+    } else {
+      const count = clientInvoices.length + 1;
+      const invoiceNumber = `INV-MSS-2026-${String(count).padStart(3, '0')}`;
+
+      createClientInvoice({
+        invoiceNumber,
+        clientId: selectedClient.id,
+        clientName: selectedClient.name,
+        contractId: formData.contractId,
+        invoiceDate: formData.invoiceDate,
+        dueDate: formData.dueDate,
+        billingMonth: formData.billingMonth,
+        subtotal: formData.subtotal,
+        taxAmount,
+        totalAmount,
+        status: 'ISSUED',
+        items: [
+          {
+            id: '1',
+            description: `Guard Deployment Services for ${formData.billingMonth}`,
+            quantity: 1,
+            unitPrice: formData.subtotal,
+            totalPrice: formData.subtotal,
+          },
+        ],
+      });
+      addToast(`Invoice ${invoiceNumber} issued successfully`, 'success');
+    }
+
+    setIsCreateModalOpen(false);
+    setEditingInvoice(null);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deletingInvoice) return;
+    const res = deleteClientInvoice(deletingInvoice.id);
+    if (res.success) {
+      addToast(`Invoice ${deletingInvoice.invoiceNumber} voided/deleted successfully`, 'success');
+      setDeletingInvoice(null);
+    } else {
+      addToast(res.error || 'Failed to delete invoice', 'error');
+    }
+  };
           unitPrice: formData.subtotal,
           totalPrice: formData.subtotal,
         },
@@ -114,7 +198,7 @@ export const ClientInvoicesView: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setIsCreateModalOpen(true)}
+            onClick={handleOpenCreate}
             className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
@@ -165,7 +249,17 @@ export const ClientInvoicesView: React.FC = () => {
                     </span>
                   </td>
                   <td className="px-6 py-3.5 text-right">
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <RowActionButtons
+                        canEdit={canEdit}
+                        canDelete={canDelete}
+                        onView={() => setDetailInvoice(inv)}
+                        onEdit={() => handleOpenEdit(inv)}
+                        onDelete={() => setDeletingInvoice(inv)}
+                        viewTooltip={`View ${inv.invoiceNumber}`}
+                        editTooltip={`Edit ${inv.invoiceNumber}`}
+                        deleteTooltip={`Delete ${inv.invoiceNumber}`}
+                      />
                       <button
                         type="button"
                         onClick={() => setSelectedInvoiceForPrint(inv)}
@@ -195,15 +289,15 @@ export const ClientInvoicesView: React.FC = () => {
         </div>
       </div>
 
-      {/* Generate Invoice Modal */}
+      {/* Generate / Edit Invoice Modal */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
           <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95">
             <div className="bg-slate-900 px-6 py-4 text-white flex items-center justify-between">
               <h3 className="font-extrabold text-base tracking-tight font-['Space_Grotesk']">
-                Generate Monthly Client Invoice
+                {editingInvoice ? `Edit Invoice (${editingInvoice.invoiceNumber})` : 'Generate Monthly Client Invoice'}
               </h3>
-              <button onClick={() => setIsCreateModalOpen(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => { setIsCreateModalOpen(false); setEditingInvoice(null); }} className="text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -286,7 +380,7 @@ export const ClientInvoicesView: React.FC = () => {
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
                 <button
                   type="button"
-                  onClick={() => setIsCreateModalOpen(false)}
+                  onClick={() => { setIsCreateModalOpen(false); setEditingInvoice(null); }}
                   className="px-4 py-2 font-semibold text-slate-600 hover:text-slate-900 rounded-xl"
                 >
                   Cancel
@@ -295,7 +389,7 @@ export const ClientInvoicesView: React.FC = () => {
                   type="submit"
                   className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-xs transition-all"
                 >
-                  Issue Invoice
+                  {editingInvoice ? 'Save Changes' : 'Issue Invoice'}
                 </button>
               </div>
             </form>

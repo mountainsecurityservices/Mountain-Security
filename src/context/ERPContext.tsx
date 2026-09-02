@@ -150,6 +150,7 @@ export interface ERPContextType {
   resetPasswordWithToken: (arg1: string, arg2: string, arg3?: string) => Promise<{ success: boolean; error?: string; message?: string }>;
   createUser: (userData: Partial<User>) => { success: boolean; error?: string };
   updateUser: (id: string, userData: Partial<User>) => { success: boolean; error?: string };
+  deleteUser: (id: string) => { success: boolean; error?: string };
   setUserStatus: (id: string, status: UserStatus, reason?: string) => { success: boolean; error?: string };
   adminResetPassword: (id: string, pass: string) => { success: boolean; error?: string };
   getUserPermissions: (user: User) => string[];
@@ -159,6 +160,7 @@ export interface ERPContextType {
   setRoles: React.Dispatch<React.SetStateAction<Role[]>>;
   createRole: (roleData: Partial<Role>) => { success: boolean; error?: string };
   updateRole: (id: string, roleData: Partial<Role>) => { success: boolean; error?: string };
+  deleteRole: (id: string) => { success: boolean; error?: string };
   setRoleStatus: (id: string, status: RoleStatus) => void;
   updateRolePermissions: (id: string, permissions: string[]) => void;
 
@@ -194,11 +196,20 @@ export interface ERPContextType {
   bankAccounts: BankAccount[];
   suppliers: Supplier[];
   createVoucher: (voucher: Omit<Voucher, 'id' | 'createdAt' | 'createdBy' | 'status'>) => Voucher;
+  updateVoucher: (id: string, voucherData: Partial<Voucher>) => { success: boolean; error?: string };
+  deleteVoucher: (id: string) => { success: boolean; error?: string };
   approveVoucher: (id: string) => void;
   postVoucher: (id: string) => void;
   reverseVoucher: (id: string, reason: string) => void;
   createAccount: (account: Omit<ChartOfAccount, 'id' | 'balance'>) => void;
   updateAccount: (id: string, data: Partial<ChartOfAccount>) => void;
+  deleteAccount: (id: string) => { success: boolean; error?: string };
+  createBankAccount: (bank: Omit<BankAccount, 'id'>) => void;
+  updateBankAccount: (id: string, data: Partial<BankAccount>) => void;
+  deleteBankAccount: (id: string) => { success: boolean; error?: string };
+  createCashAccount: (cash: Omit<CashAccount, 'id'>) => void;
+  updateCashAccount: (id: string, data: Partial<CashAccount>) => void;
+  deleteCashAccount: (id: string) => { success: boolean; error?: string };
 
   // Clients & Sites (Phase 3)
   clients: Client[];
@@ -210,14 +221,21 @@ export interface ERPContextType {
   addClient: (client: Omit<Client, 'id' | 'createdAt' | 'createdBy' | 'totalOutstanding'>) => Client;
   createClient: (client: any) => Client;
   updateClient: (id: string, data: Partial<Client>) => void;
+  deleteClient: (id: string, isArchive?: boolean) => { success: boolean; error?: string };
+  restoreClient: (id: string) => void;
   addContract: (contract: Omit<SecurityContract, 'id' | 'createdAt'>) => SecurityContract;
   createContract: (contract: any) => SecurityContract;
   updateContract: (id: string, data: Partial<SecurityContract>) => void;
+  deleteContract: (id: string) => { success: boolean; error?: string };
   addSecuritySite: (site: Omit<SecuritySite, 'id' | 'createdAt'>) => SecuritySite;
   createSecuritySite: (site: any) => SecuritySite;
   updateSecuritySite: (id: string, data: Partial<SecuritySite>) => void;
+  deleteSecuritySite: (id: string) => { success: boolean; error?: string };
   createClientInvoice: (invoice: Omit<ClientInvoice, 'id' | 'createdAt' | 'paidAmount' | 'outstandingAmount'>) => ClientInvoice;
+  updateClientInvoice: (id: string, data: Partial<ClientInvoice>) => { success: boolean; error?: string };
+  deleteClientInvoice: (id: string) => { success: boolean; error?: string };
   recordClientReceipt: (receipt: Omit<ClientReceipt, 'id' | 'createdAt' | 'status'>) => ClientReceipt;
+  deleteClientReceipt: (id: string) => { success: boolean; error?: string };
   recordInvoicePayment: (invoiceId: string, amount: number, paymentMethod?: string) => void;
 
   // Guards & Operations (Phase 4)
@@ -231,11 +249,19 @@ export interface ERPContextType {
   addGuard: (guard: Omit<GuardPersonnel, 'id' | 'createdAt'>) => GuardPersonnel;
   createGuard: (guard: any) => GuardPersonnel;
   updateGuard: (id: string, data: Partial<GuardPersonnel>) => void;
+  deleteGuard: (id: string, isArchive?: boolean) => { success: boolean; error?: string };
+  restoreGuard: (id: string) => void;
   addGuardAssignment: (asg: Omit<GuardAssignment, 'id' | 'createdAt'>) => GuardAssignment;
   createGuardAssignment: (asg: any) => GuardAssignment;
+  updateGuardAssignment: (id: string, data: Partial<GuardAssignment>) => { success: boolean; error?: string };
+  deleteGuardAssignment: (id: string) => { success: boolean; error?: string };
   recordDailyDeployment: (dep: Omit<DailyDeployment, 'id' | 'createdAt'>) => DailyDeployment;
   recordAttendance: (att: Omit<AttendanceRecord, 'id'>) => void;
+  updateAttendance: (id: string, data: Partial<AttendanceRecord>) => { success: boolean; error?: string };
+  deleteAttendance: (id: string) => { success: boolean; error?: string };
   recordOvertime: (ot: any) => void;
+  updateOvertime: (id: string, data: Partial<OvertimeRecord>) => { success: boolean; error?: string };
+  deleteOvertime: (id: string) => { success: boolean; error?: string };
   approveOvertime: (id: string) => void;
   rejectOvertime: (id: string) => void;
 
@@ -252,9 +278,13 @@ export interface ERPContextType {
   payrollRecords: PayrollRecord[];
   salaryPayments: SalaryPayment[];
   requestAdvance: (adv: Omit<EmployeeAdvance, 'id' | 'createdAt' | 'paidAmount' | 'recoveredAmount' | 'outstandingBalance' | 'status'>) => void;
+  updateAdvance: (id: string, data: Partial<EmployeeAdvance>) => { success: boolean; error?: string };
+  deleteAdvance: (id: string) => { success: boolean; error?: string };
   approveAdvance: (id: string) => void;
   processPayrollPeriod: (periodId: string) => void;
   approvePayrollPeriod: (periodId: string) => void;
+  updatePayrollRecord: (id: string, data: Partial<PayrollRecord>) => { success: boolean; error?: string };
+  deletePayrollRecord: (id: string) => { success: boolean; error?: string };
   disburseSalaryPayment: (payment: Omit<SalaryPayment, 'id' | 'createdAt' | 'status'>) => void;
 
   // Inventory, Armory & Uniforms (Phase 6)
@@ -262,10 +292,14 @@ export interface ERPContextType {
   inventoryItems: InventoryItem[];
   uniformStock: UniformItem[];
   createUniformItem: (item: Omit<UniformItem, 'id'>) => void;
+  updateUniformItem: (id: string, data: Partial<UniformItem>) => { success: boolean; error?: string };
+  deleteUniformItem: (id: string) => { success: boolean; error?: string };
   weapons: WeaponItem[];
   weaponsStock: WeaponItem[];
   createWeapon: (item: any) => void;
   createWeaponItem: (item: Omit<WeaponItem, 'id'>) => void;
+  updateWeaponItem: (id: string, data: Partial<WeaponItem>) => { success: boolean; error?: string };
+  deleteWeaponItem: (id: string) => { success: boolean; error?: string };
   issueWeapon: (weaponId: string, guardId?: string, notes?: string) => void;
   issueWeaponToGuard: (weaponId: string, guardId: string) => void;
   returnWeapon: (weaponId: string, notes?: string) => void;
@@ -275,6 +309,8 @@ export interface ERPContextType {
   equipmentRecords: EquipmentRecord[];
   fixedAssets: FixedAsset[];
   addInventoryItem: (item: Omit<InventoryItem, 'id' | 'totalQuantity' | 'availableQuantity' | 'issuedQuantity'>) => void;
+  updateInventoryItem: (id: string, data: Partial<InventoryItem>) => { success: boolean; error?: string };
+  deleteInventoryItem: (id: string) => { success: boolean; error?: string };
   recordStockMovement: (movement: Omit<StockMovement, 'id' | 'createdAt' | 'status'>) => void;
   issueUniformToGuard: (itemIdOrRecord: string | Omit<UniformIssueRecord, 'id' | 'status'>, guardId?: string, qty?: number) => void;
   returnUniformFromGuard: (id: string, returnCondition: any) => void;
@@ -286,6 +322,7 @@ export interface ERPContextType {
   controlledIncidents: ControlledIncident[];
   registerControlledItem: (item: Omit<ControlledItem, 'id' | 'recordNumber' | 'registrationDate'>) => ControlledItem;
   updateControlledItem: (id: string, data: Partial<ControlledItem>) => void;
+  deleteControlledItem: (id: string) => { success: boolean; error?: string };
   recordControlledMovement: (mov: Omit<ControlledCustodyMovement, 'id' | 'movementNumber'>) => void;
   reportControlledIncident: (inc: Omit<ControlledIncident, 'id' | 'incidentNumber' | 'dateReported' | 'status'>) => void;
 
@@ -915,6 +952,38 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const deleteUser = (id: string) => {
+    try {
+      const target = users.find((u) => u.id === id);
+      if (!target) return { success: false, error: 'User not found' };
+      if (target.id === currentUser.id) {
+        addToast('You cannot delete your own active logged-in account.', 'error');
+        return { success: false, error: 'Cannot delete current user session' };
+      }
+      if (target.username === 'tariq.khan') {
+        addToast('Master Super Admin user account is protected and cannot be deleted.', 'error');
+        return { success: false, error: 'Super Admin account is protected' };
+      }
+      setUsers((prev) => prev.filter((u) => u.id !== id));
+      logAuditEvent({
+        userId: currentUser.id,
+        userName: currentUser.fullName,
+        userRole: currentUserRole?.name || 'Administrator',
+        action: 'RECORD_DELETE',
+        module: 'Users',
+        resource: 'User Management',
+        recordId: target.id,
+        recordTitle: target.fullName,
+        details: `Deleted user account: ${target.fullName} (${target.username})`,
+        status: 'success',
+      });
+      addToast(`User ${target.fullName} deleted.`, 'success');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to delete user' };
+    }
+  };
+
   const setUserStatus = (id: string, status: UserStatus, _reason?: string) => {
     try {
       setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status } : u)));
@@ -970,6 +1039,39 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const deleteRole = (id: string) => {
+    try {
+      const target = roles.find((r) => r.id === id);
+      if (!target) return { success: false, error: 'Role not found' };
+      if (target.code === 'SUPER_ADMIN') {
+        addToast('System default SUPER_ADMIN role cannot be deleted.', 'error');
+        return { success: false, error: 'Super Admin role is protected' };
+      }
+      const assignedUsers = users.filter((u) => u.primaryRoleId === id || u.additionalRoleIds?.includes(id));
+      if (assignedUsers.length > 0) {
+        addToast(`Cannot delete role: ${assignedUsers.length} user(s) are currently assigned to this role.`, 'error');
+        return { success: false, error: `Role assigned to ${assignedUsers.length} active users` };
+      }
+      setRoles((prev) => prev.filter((r) => r.id !== id));
+      logAuditEvent({
+        userId: currentUser.id,
+        userName: currentUser.fullName,
+        userRole: currentUserRole?.name || 'Administrator',
+        action: 'RECORD_DELETE',
+        module: 'Roles',
+        resource: 'Role Management',
+        recordId: target.id,
+        recordTitle: target.name,
+        details: `Deleted security role: ${target.name} (${target.code})`,
+        status: 'success',
+      });
+      addToast(`Role ${target.name} deleted.`, 'success');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to delete role' };
+    }
+  };
+
   const setRoleStatus = (id: string, status: RoleStatus) => {
     setRoles((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
   };
@@ -989,8 +1091,71 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: 'DRAFT',
     };
     setVouchers((prev) => [newV, ...prev]);
+    logAuditEvent({
+      userId: currentUser.id,
+      userName: currentUser.fullName,
+      userRole: currentUserRole?.name || 'Administrator',
+      action: 'RECORD_CREATE',
+      module: 'Accounts',
+      resource: 'Vouchers',
+      recordId: newV.id,
+      recordTitle: newV.voucherNumber,
+      details: `Created new draft voucher ${newV.voucherNumber} (${newV.type}).`,
+      status: 'success',
+    });
     addToast(`Voucher ${newV.voucherNumber} created as DRAFT.`, 'info');
     return newV;
+  };
+
+  const updateVoucher = (id: string, voucherData: Partial<Voucher>) => {
+    try {
+      setVouchers((prev) => prev.map((v) => (v.id === id ? { ...v, ...voucherData } : v)));
+      const v = vouchers.find((item) => item.id === id);
+      logAuditEvent({
+        userId: currentUser.id,
+        userName: currentUser.fullName,
+        userRole: currentUserRole?.name || 'Administrator',
+        action: 'RECORD_UPDATE',
+        module: 'Accounts',
+        resource: 'Vouchers',
+        recordId: id,
+        recordTitle: v?.voucherNumber || id,
+        details: `Updated voucher ${v?.voucherNumber || id}.`,
+        status: 'success',
+      });
+      addToast('Voucher details updated.', 'success');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to update voucher' };
+    }
+  };
+
+  const deleteVoucher = (id: string) => {
+    try {
+      const v = vouchers.find((item) => item.id === id);
+      if (!v) return { success: false, error: 'Voucher not found' };
+      if (v.status === 'POSTED') {
+        addToast('Cannot delete a POSTED voucher. Please reverse the voucher instead to maintain accounting integrity.', 'error');
+        return { success: false, error: 'Cannot delete POSTED voucher' };
+      }
+      setVouchers((prev) => prev.filter((item) => item.id !== id));
+      logAuditEvent({
+        userId: currentUser.id,
+        userName: currentUser.fullName,
+        userRole: currentUserRole?.name || 'Administrator',
+        action: 'RECORD_DELETE',
+        module: 'Accounts',
+        resource: 'Vouchers',
+        recordId: id,
+        recordTitle: v.voucherNumber,
+        details: `Deleted ${v.status} voucher ${v.voucherNumber}.`,
+        status: 'success',
+      });
+      addToast(`Voucher ${v.voucherNumber} deleted.`, 'success');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to delete voucher' };
+    }
   };
 
   const approveVoucher = (id: string) => {
@@ -1011,11 +1176,125 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const createAccount = (acc: Omit<ChartOfAccount, 'id' | 'balance'>) => {
     const newAcc: ChartOfAccount = { ...acc, id: `coa-${Date.now()}`, balance: 0 };
     setChartOfAccounts((prev) => [...prev, newAcc]);
-    addToast(`Account ${newAcc.accountCode} added.`, 'success');
+    logAuditEvent({
+      userId: currentUser.id,
+      userName: currentUser.fullName,
+      userRole: currentUserRole?.name || 'Administrator',
+      action: 'RECORD_CREATE',
+      module: 'Accounts',
+      resource: 'Chart of Accounts',
+      recordId: newAcc.id,
+      recordTitle: `${newAcc.code || newAcc.accountCode} - ${newAcc.name}`,
+      details: `Created chart of account ${newAcc.code || newAcc.accountCode} (${newAcc.name}).`,
+      status: 'success',
+    });
+    addToast(`Account ${newAcc.code || newAcc.accountCode} added.`, 'success');
   };
 
   const updateAccount = (id: string, data: Partial<ChartOfAccount>) => {
     setChartOfAccounts((prev) => prev.map((a) => (a.id === id ? { ...a, ...data } : a)));
+    const acc = chartOfAccounts.find((a) => a.id === id);
+    logAuditEvent({
+      userId: currentUser.id,
+      userName: currentUser.fullName,
+      userRole: currentUserRole?.name || 'Administrator',
+      action: 'RECORD_UPDATE',
+      module: 'Accounts',
+      resource: 'Chart of Accounts',
+      recordId: id,
+      recordTitle: acc ? `${acc.accountCode} - ${acc.accountName}` : id,
+      details: `Updated chart of account ${acc?.accountCode || id}.`,
+      status: 'success',
+    });
+    addToast('Account updated.', 'success');
+  };
+
+  const deleteAccount = (id: string) => {
+    try {
+      const acc = chartOfAccounts.find((a) => a.id === id);
+      if (!acc) return { success: false, error: 'Account not found' };
+      if (Math.abs(acc.balance) > 0.01) {
+        addToast(`Cannot delete account with an active balance (${company.currencySymbol} ${acc.balance.toLocaleString()}).`, 'error');
+        return { success: false, error: 'Account has non-zero balance' };
+      }
+      setChartOfAccounts((prev) => prev.filter((a) => a.id !== id));
+      logAuditEvent({
+        userId: currentUser.id,
+        userName: currentUser.fullName,
+        userRole: currentUserRole?.name || 'Administrator',
+        action: 'RECORD_DELETE',
+        module: 'Accounts',
+        resource: 'Chart of Accounts',
+        recordId: id,
+        recordTitle: `${acc.accountCode} - ${acc.accountName}`,
+        details: `Deleted account ${acc.accountCode} (${acc.accountName}).`,
+        status: 'success',
+      });
+      addToast(`Account ${acc.accountCode} deleted.`, 'success');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to delete account' };
+    }
+  };
+
+  const createBankAccount = (bank: Omit<BankAccount, 'id'>) => {
+    const newBank: BankAccount = { ...bank, id: `bnk-${Date.now()}` };
+    setBankAccounts((prev) => [...prev, newBank]);
+    addToast(`Bank account ${newBank.bankName} added.`, 'success');
+  };
+
+  const updateBankAccount = (id: string, data: Partial<BankAccount>) => {
+    setBankAccounts((prev) => prev.map((b) => (b.id === id ? { ...b, ...data } : b)));
+    addToast('Bank account updated.', 'success');
+  };
+
+  const deleteBankAccount = (id: string) => {
+    const b = bankAccounts.find((item) => item.id === id);
+    setBankAccounts((prev) => prev.filter((item) => item.id !== id));
+    logAuditEvent({
+      userId: currentUser.id,
+      userName: currentUser.fullName,
+      userRole: currentUserRole?.name || 'Administrator',
+      action: 'RECORD_DELETE',
+      module: 'Accounts',
+      resource: 'Bank Accounts',
+      recordId: id,
+      recordTitle: b?.bankName,
+      details: `Deleted bank account ${b?.bankName || id}.`,
+      status: 'success',
+    });
+    addToast('Bank account deleted.', 'success');
+    return { success: true };
+  };
+
+  const createCashAccount = (cash: Omit<CashAccount, 'id'>) => {
+    const newCash: CashAccount = { ...cash, id: `csh-${Date.now()}` };
+    setCashAccounts((prev) => [...prev, newCash]);
+    addToast(`Cash ledger ${newCash.name} added.`, 'success');
+  };
+
+  const updateCashAccount = (id: string, data: Partial<CashAccount>) => {
+    setCashAccounts((prev) => prev.map((c) => (c.id === id ? { ...c, ...data } : c)));
+    addToast('Cash ledger updated.', 'success');
+  };
+
+  const deleteCashAccount = (id: string) => {
+    const c = cashAccounts.find((item) => item.id === id);
+    setCashAccounts((prev) => prev.filter((item) => item.id !== id));
+    logAuditEvent({
+      userId: currentUser.id,
+      userName: currentUser.fullName,
+      userRole: currentUserRole?.name || 'Administrator',
+      action: 'RECORD_DELETE',
+      module: 'Accounts',
+      resource: 'Cash Accounts',
+      recordId: id,
+      recordTitle: c?.name,
+      details: `Deleted cash ledger ${c?.name || id}.`,
+      status: 'success',
+    });
+    addToast('Cash ledger deleted.', 'success');
+    return { success: true };
   };
 
   // Clients & Sites methods
@@ -1037,6 +1316,86 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateClient = (id: string, data: Partial<Client>) => {
     setClients((prev) => prev.map((c) => (c.id === id ? { ...c, ...data } : c)));
+    const cli = clients.find((c) => c.id === id);
+    logAuditEvent({
+      userId: currentUser.id,
+      userName: currentUser.fullName,
+      userRole: currentUserRole?.name || 'Administrator',
+      action: 'RECORD_UPDATE',
+      module: 'Clients',
+      resource: 'Client Directory',
+      recordId: id,
+      recordTitle: cli?.companyName || id,
+      details: `Updated client profile for ${cli?.companyName || id}.`,
+      status: 'success',
+    });
+    addToast('Client details updated.', 'success');
+  };
+
+  const deleteClient = (id: string, isArchive: boolean = false) => {
+    try {
+      const cli = clients.find((c) => c.id === id);
+      if (!cli) return { success: false, error: 'Client not found' };
+
+      const activeContracts = contracts.filter((ctr) => ctr.clientId === id && ctr.status === 'ACTIVE');
+      if (activeContracts.length > 0 && !isArchive) {
+        addToast(`Client has ${activeContracts.length} active contract(s). Archive instead or terminate contracts first.`, 'error');
+        return { success: false, error: `Client has ${activeContracts.length} active contract(s)` };
+      }
+
+      if (isArchive) {
+        setClients((prev) => prev.map((c) => (c.id === id ? { ...c, status: 'INACTIVE' as any } : c)));
+        logAuditEvent({
+          userId: currentUser.id,
+          userName: currentUser.fullName,
+          userRole: currentUserRole?.name || 'Administrator',
+          action: 'RECORD_ARCHIVE',
+          module: 'Clients',
+          resource: 'Client Directory',
+          recordId: id,
+          recordTitle: cli.companyName,
+          details: `Archived client ${cli.companyName}. Historical records preserved.`,
+          status: 'success',
+        });
+        addToast(`Client ${cli.companyName} archived.`, 'info');
+      } else {
+        setClients((prev) => prev.filter((c) => c.id !== id));
+        logAuditEvent({
+          userId: currentUser.id,
+          userName: currentUser.fullName,
+          userRole: currentUserRole?.name || 'Administrator',
+          action: 'RECORD_DELETE',
+          module: 'Clients',
+          resource: 'Client Directory',
+          recordId: id,
+          recordTitle: cli.companyName,
+          details: `Permanently deleted client ${cli.companyName}.`,
+          status: 'success',
+        });
+        addToast(`Client ${cli.companyName} deleted.`, 'success');
+      }
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to delete client' };
+    }
+  };
+
+  const restoreClient = (id: string) => {
+    setClients((prev) => prev.map((c) => (c.id === id ? { ...c, status: 'ACTIVE' as any } : c)));
+    const cli = clients.find((c) => c.id === id);
+    logAuditEvent({
+      userId: currentUser.id,
+      userName: currentUser.fullName,
+      userRole: currentUserRole?.name || 'Administrator',
+      action: 'RECORD_RESTORE',
+      module: 'Clients',
+      resource: 'Client Directory',
+      recordId: id,
+      recordTitle: cli?.companyName || id,
+      details: `Restored archived client ${cli?.companyName || id} to active status.`,
+      status: 'success',
+    });
+    addToast('Client restored to active status.', 'success');
   };
 
   const addContract = (ctr: Omit<SecurityContract, 'id' | 'createdAt'>) => {
@@ -1047,12 +1406,62 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       totalMonthlyValue: ctr.totalMonthlyValue ?? ctr.monthlyRate ?? 250000,
     };
     setContracts((prev) => [newCtr, ...prev]);
+    logAuditEvent({
+      userId: currentUser.id,
+      userName: currentUser.fullName,
+      userRole: currentUserRole?.name || 'Administrator',
+      action: 'RECORD_CREATE',
+      module: 'Clients',
+      resource: 'Contracts',
+      recordId: newCtr.id,
+      recordTitle: newCtr.contractNumber,
+      details: `Drafted security contract ${newCtr.contractNumber} for ${newCtr.clientName}.`,
+      status: 'success',
+    });
     addToast(`Contract ${newCtr.contractNumber} recorded.`, 'success');
     return newCtr;
   };
 
   const updateContract = (id: string, data: Partial<SecurityContract>) => {
     setContracts((prev) => prev.map((c) => (c.id === id ? { ...c, ...data } : c)));
+    const ctr = contracts.find((c) => c.id === id);
+    logAuditEvent({
+      userId: currentUser.id,
+      userName: currentUser.fullName,
+      userRole: currentUserRole?.name || 'Administrator',
+      action: 'RECORD_UPDATE',
+      module: 'Clients',
+      resource: 'Contracts',
+      recordId: id,
+      recordTitle: ctr?.contractNumber || id,
+      details: `Updated contract ${ctr?.contractNumber || id}.`,
+      status: 'success',
+    });
+    addToast('Contract updated.', 'success');
+  };
+
+  const deleteContract = (id: string) => {
+    try {
+      const ctr = contracts.find((c) => c.id === id);
+      if (!ctr) return { success: false, error: 'Contract not found' };
+      setContracts((prev) => prev.filter((c) => c.id !== id));
+      logAuditEvent({
+        userId: currentUser.id,
+        userName: currentUser.fullName,
+        userRole: currentUserRole?.name || 'Administrator',
+        action: 'RECORD_DELETE',
+        module: 'Clients',
+        resource: 'Contracts',
+        recordId: id,
+        recordTitle: ctr.contractNumber,
+        details: `Deleted contract ${ctr.contractNumber} (${ctr.clientName}).`,
+        status: 'success',
+      });
+      addToast(`Contract ${ctr.contractNumber} deleted.`, 'success');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to delete contract' };
+    }
   };
 
   const addSecuritySite = (site: Omit<SecuritySite, 'id' | 'createdAt'>) => {
@@ -1063,12 +1472,67 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toISOString(),
     };
     setSecuritySites((prev) => [newSite, ...prev]);
+    logAuditEvent({
+      userId: currentUser.id,
+      userName: currentUser.fullName,
+      userRole: currentUserRole?.name || 'Administrator',
+      action: 'RECORD_CREATE',
+      module: 'Clients',
+      resource: 'Security Sites',
+      recordId: newSite.id,
+      recordTitle: newSite.name,
+      details: `Registered physical security site ${newSite.name} (${newSite.siteCode}).`,
+      status: 'success',
+    });
     addToast(`Security site ${newSite.name} registered.`, 'success');
     return newSite;
   };
 
   const updateSecuritySite = (id: string, data: Partial<SecuritySite>) => {
     setSecuritySites((prev) => prev.map((s) => (s.id === id ? { ...s, ...data } : s)));
+    const s = securitySites.find((item) => item.id === id);
+    logAuditEvent({
+      userId: currentUser.id,
+      userName: currentUser.fullName,
+      userRole: currentUserRole?.name || 'Administrator',
+      action: 'RECORD_UPDATE',
+      module: 'Clients',
+      resource: 'Security Sites',
+      recordId: id,
+      recordTitle: s?.name || id,
+      details: `Updated security site ${s?.name || id}.`,
+      status: 'success',
+    });
+    addToast('Security site updated.', 'success');
+  };
+
+  const deleteSecuritySite = (id: string) => {
+    try {
+      const site = securitySites.find((s) => s.id === id);
+      if (!site) return { success: false, error: 'Site not found' };
+      const activeGuards = guardAssignments.filter((a) => a.siteId === id && a.status === 'ACTIVE');
+      if (activeGuards.length > 0) {
+        addToast(`Cannot delete site: ${activeGuards.length} guard(s) are actively deployed here. Reassign them first.`, 'error');
+        return { success: false, error: `${activeGuards.length} guard(s) actively deployed` };
+      }
+      setSecuritySites((prev) => prev.filter((s) => s.id !== id));
+      logAuditEvent({
+        userId: currentUser.id,
+        userName: currentUser.fullName,
+        userRole: currentUserRole?.name || 'Administrator',
+        action: 'RECORD_DELETE',
+        module: 'Clients',
+        resource: 'Security Sites',
+        recordId: id,
+        recordTitle: site.name,
+        details: `Deleted site ${site.name} (${site.siteCode}).`,
+        status: 'success',
+      });
+      addToast(`Site ${site.name} deleted.`, 'success');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to delete site' };
+    }
   };
 
   const createClientInvoice = (inv: Omit<ClientInvoice, 'id' | 'createdAt' | 'paidAmount' | 'outstandingAmount'>) => {
@@ -1082,8 +1546,67 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       totalAmount: grand,
     };
     setClientInvoices((prev) => [newInv, ...prev]);
+    logAuditEvent({
+      userId: currentUser.id,
+      userName: currentUser.fullName,
+      userRole: currentUserRole?.name || 'Administrator',
+      action: 'RECORD_CREATE',
+      module: 'Clients',
+      resource: 'Client Invoices',
+      recordId: newInv.id,
+      recordTitle: newInv.invoiceNumber,
+      details: `Generated client invoice ${newInv.invoiceNumber} for ${newInv.clientName}.`,
+      status: 'success',
+    });
     addToast(`Invoice ${newInv.invoiceNumber} generated.`, 'success');
     return newInv;
+  };
+
+  const updateClientInvoice = (id: string, data: Partial<ClientInvoice>) => {
+    try {
+      setClientInvoices((prev) => prev.map((inv) => (inv.id === id ? { ...inv, ...data } : inv)));
+      const inv = clientInvoices.find((i) => i.id === id);
+      logAuditEvent({
+        userId: currentUser.id,
+        userName: currentUser.fullName,
+        userRole: currentUserRole?.name || 'Administrator',
+        action: 'RECORD_UPDATE',
+        module: 'Clients',
+        resource: 'Client Invoices',
+        recordId: id,
+        recordTitle: inv?.invoiceNumber || id,
+        details: `Updated invoice ${inv?.invoiceNumber || id}.`,
+        status: 'success',
+      });
+      addToast('Invoice updated.', 'success');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to update invoice' };
+    }
+  };
+
+  const deleteClientInvoice = (id: string) => {
+    try {
+      const inv = clientInvoices.find((i) => i.id === id);
+      if (!inv) return { success: false, error: 'Invoice not found' };
+      setClientInvoices((prev) => prev.filter((i) => i.id !== id));
+      logAuditEvent({
+        userId: currentUser.id,
+        userName: currentUser.fullName,
+        userRole: currentUserRole?.name || 'Administrator',
+        action: 'RECORD_DELETE',
+        module: 'Clients',
+        resource: 'Client Invoices',
+        recordId: id,
+        recordTitle: inv.invoiceNumber,
+        details: `Deleted invoice ${inv.invoiceNumber} for ${inv.clientName}.`,
+        status: 'success',
+      });
+      addToast(`Invoice ${inv.invoiceNumber} deleted.`, 'success');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to delete invoice' };
+    }
   };
 
   const recordClientReceipt = (rct: Omit<ClientReceipt, 'id' | 'createdAt' | 'status'>) => {
@@ -1094,8 +1617,43 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: 'POSTED',
     };
     setClientReceipts((prev) => [newRct, ...prev]);
+    logAuditEvent({
+      userId: currentUser.id,
+      userName: currentUser.fullName,
+      userRole: currentUserRole?.name || 'Administrator',
+      action: 'RECORD_CREATE',
+      module: 'Clients',
+      resource: 'Client Receipts',
+      recordId: newRct.id,
+      recordTitle: newRct.receiptNumber,
+      details: `Recorded client payment receipt ${newRct.receiptNumber} (${company.currencySymbol} ${(newRct.amountReceived || 0).toLocaleString()}).`,
+      status: 'success',
+    });
     addToast(`Receipt ${newRct.receiptNumber} recorded.`, 'success');
     return newRct;
+  };
+
+  const deleteClientReceipt = (id: string) => {
+    try {
+      const rct = clientReceipts.find((r) => r.id === id);
+      setClientReceipts((prev) => prev.filter((r) => r.id !== id));
+      logAuditEvent({
+        userId: currentUser.id,
+        userName: currentUser.fullName,
+        userRole: currentUserRole?.name || 'Administrator',
+        action: 'RECORD_DELETE',
+        module: 'Clients',
+        resource: 'Client Receipts',
+        recordId: id,
+        recordTitle: rct?.receiptNumber,
+        details: `Deleted receipt ${rct?.receiptNumber || id}.`,
+        status: 'success',
+      });
+      addToast('Receipt deleted.', 'success');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to delete receipt' };
+    }
   };
 
   const recordInvoicePayment = (invoiceId: string, amount: number, paymentMethod: string = 'Bank Transfer') => {
@@ -1158,6 +1716,91 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateGuard = (id: string, data: Partial<GuardPersonnel>) => {
     setGuards((prev) => prev.map((g) => (g.id === id ? { ...g, ...data } : g)));
+    const g = guards.find((item) => item.id === id);
+    logAuditEvent({
+      userId: currentUser.id,
+      userName: currentUser.fullName,
+      userRole: currentUserRole?.name || 'Administrator',
+      action: 'RECORD_UPDATE',
+      module: 'Operations',
+      resource: 'Personnel Master',
+      recordId: id,
+      recordTitle: g?.fullName || id,
+      details: `Updated security guard personnel record for ${g?.fullName || id}.`,
+      status: 'success',
+    });
+    addToast('Personnel record updated.', 'success');
+  };
+
+  const deleteGuard = (id: string, isArchive: boolean = false) => {
+    try {
+      const grd = guards.find((g) => g.id === id);
+      if (!grd) return { success: false, error: 'Guard not found' };
+
+      const activeAssignments = guardAssignments.filter((a) => (a.guardId === id || a.employeeId === id) && a.status === 'ACTIVE');
+      const issuedWeapons = weaponsStockList.filter((w) => w.assignedGuardId === id && w.status === 'ISSUED');
+
+      if (!isArchive && (activeAssignments.length > 0 || issuedWeapons.length > 0)) {
+        const reasons = [];
+        if (activeAssignments.length > 0) reasons.push(`${activeAssignments.length} active post assignment(s)`);
+        if (issuedWeapons.length > 0) reasons.push(`${issuedWeapons.length} issued weapon(s) in custody`);
+        addToast(`Cannot permanently delete guard with ${reasons.join(' and ')}. Please archive personnel instead.`, 'error');
+        return { success: false, error: `Guard has active duties: ${reasons.join(', ')}` };
+      }
+
+      if (isArchive) {
+        setGuards((prev) => prev.map((g) => (g.id === id ? { ...g, status: 'INACTIVE' as any } : g)));
+        logAuditEvent({
+          userId: currentUser.id,
+          userName: currentUser.fullName,
+          userRole: currentUserRole?.name || 'Administrator',
+          action: 'RECORD_ARCHIVE',
+          module: 'Operations',
+          resource: 'Personnel Master',
+          recordId: id,
+          recordTitle: grd.fullName,
+          details: `Archived guard personnel ${grd.fullName} (${grd.guardCode || grd.employeeCode}).`,
+          status: 'success',
+        });
+        addToast(`Guard ${grd.fullName} archived as inactive.`, 'info');
+      } else {
+        setGuards((prev) => prev.filter((g) => g.id !== id));
+        logAuditEvent({
+          userId: currentUser.id,
+          userName: currentUser.fullName,
+          userRole: currentUserRole?.name || 'Administrator',
+          action: 'RECORD_DELETE',
+          module: 'Operations',
+          resource: 'Personnel Master',
+          recordId: id,
+          recordTitle: grd.fullName,
+          details: `Permanently deleted guard ${grd.fullName} (${grd.guardCode || grd.employeeCode}).`,
+          status: 'success',
+        });
+        addToast(`Guard ${grd.fullName} deleted.`, 'success');
+      }
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to delete guard' };
+    }
+  };
+
+  const restoreGuard = (id: string) => {
+    setGuards((prev) => prev.map((g) => (g.id === id ? { ...g, status: 'ACTIVE' as any } : g)));
+    const grd = guards.find((g) => g.id === id);
+    logAuditEvent({
+      userId: currentUser.id,
+      userName: currentUser.fullName,
+      userRole: currentUserRole?.name || 'Administrator',
+      action: 'RECORD_RESTORE',
+      module: 'Operations',
+      resource: 'Personnel Master',
+      recordId: id,
+      recordTitle: grd?.fullName || id,
+      details: `Restored archived guard ${grd?.fullName || id} to active duty roster.`,
+      status: 'success',
+    });
+    addToast('Guard restored to active roster.', 'success');
   };
 
   const addGuardAssignment = (asg: Omit<GuardAssignment, 'id' | 'createdAt'>) => {
@@ -1167,8 +1810,66 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toISOString(),
     };
     setGuardAssignments((prev) => [newAsg, ...prev]);
+    logAuditEvent({
+      userId: currentUser.id,
+      userName: currentUser.fullName,
+      userRole: currentUserRole?.name || 'Administrator',
+      action: 'RECORD_CREATE',
+      module: 'Operations',
+      resource: 'Guard Assignments',
+      recordId: newAsg.id,
+      recordTitle: newAsg.assignmentNumber,
+      details: `Created guard assignment ${newAsg.assignmentNumber} for ${newAsg.guardName}.`,
+      status: 'success',
+    });
     addToast(`Deployment assignment ${newAsg.assignmentNumber} created.`, 'success');
     return newAsg;
+  };
+
+  const updateGuardAssignment = (id: string, data: Partial<GuardAssignment>) => {
+    try {
+      setGuardAssignments((prev) => prev.map((a) => (a.id === id ? { ...a, ...data } : a)));
+      const asg = guardAssignments.find((a) => a.id === id);
+      logAuditEvent({
+        userId: currentUser.id,
+        userName: currentUser.fullName,
+        userRole: currentUserRole?.name || 'Administrator',
+        action: 'RECORD_UPDATE',
+        module: 'Operations',
+        resource: 'Guard Assignments',
+        recordId: id,
+        recordTitle: asg?.assignmentNumber || id,
+        details: `Updated guard assignment ${asg?.assignmentNumber || id}.`,
+        status: 'success',
+      });
+      addToast('Assignment updated.', 'success');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to update assignment' };
+    }
+  };
+
+  const deleteGuardAssignment = (id: string) => {
+    try {
+      const asg = guardAssignments.find((a) => a.id === id);
+      setGuardAssignments((prev) => prev.filter((a) => a.id !== id));
+      logAuditEvent({
+        userId: currentUser.id,
+        userName: currentUser.fullName,
+        userRole: currentUserRole?.name || 'Administrator',
+        action: 'RECORD_DELETE',
+        module: 'Operations',
+        resource: 'Guard Assignments',
+        recordId: id,
+        recordTitle: asg?.assignmentNumber,
+        details: `Deleted assignment ${asg?.assignmentNumber || id}.`,
+        status: 'success',
+      });
+      addToast('Deployment assignment removed.', 'success');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to delete assignment' };
+    }
   };
 
   const recordDailyDeployment = (dep: Omit<DailyDeployment, 'id' | 'createdAt'>) => {
@@ -1185,6 +1886,64 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const recordAttendance = (att: Omit<AttendanceRecord, 'id'>) => {
     const newAtt: AttendanceRecord = { ...att, id: `att-${Date.now()}` };
     setAttendanceRecords((prev) => [newAtt, ...prev]);
+    logAuditEvent({
+      userId: currentUser.id,
+      userName: currentUser.fullName,
+      userRole: currentUserRole?.name || 'Administrator',
+      action: 'RECORD_CREATE',
+      module: 'Operations',
+      resource: 'Attendance Logs',
+      recordId: newAtt.id,
+      recordTitle: `${newAtt.employeeName} (${newAtt.date})`,
+      details: `Logged duty attendance for ${newAtt.employeeName} on ${newAtt.date}.`,
+      status: 'success',
+    });
+  };
+
+  const updateAttendance = (id: string, data: Partial<AttendanceRecord>) => {
+    try {
+      setAttendanceRecords((prev) => prev.map((att) => (att.id === id ? { ...att, ...data } : att)));
+      const att = attendanceRecords.find((a) => a.id === id);
+      logAuditEvent({
+        userId: currentUser.id,
+        userName: currentUser.fullName,
+        userRole: currentUserRole?.name || 'Administrator',
+        action: 'RECORD_UPDATE',
+        module: 'Operations',
+        resource: 'Attendance Logs',
+        recordId: id,
+        recordTitle: att ? `${att.employeeName} (${att.date})` : id,
+        details: `Updated attendance record for ${att?.employeeName || id}.`,
+        status: 'success',
+      });
+      addToast('Attendance record updated.', 'success');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to update attendance' };
+    }
+  };
+
+  const deleteAttendance = (id: string) => {
+    try {
+      const att = attendanceRecords.find((a) => a.id === id);
+      setAttendanceRecords((prev) => prev.filter((a) => a.id !== id));
+      logAuditEvent({
+        userId: currentUser.id,
+        userName: currentUser.fullName,
+        userRole: currentUserRole?.name || 'Administrator',
+        action: 'RECORD_DELETE',
+        module: 'Operations',
+        resource: 'Attendance Logs',
+        recordId: id,
+        recordTitle: att ? `${att.employeeName} (${att.date})` : id,
+        details: `Deleted attendance log for ${att?.employeeName || id} on ${att?.date}.`,
+        status: 'success',
+      });
+      addToast('Attendance record deleted.', 'success');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to delete attendance' };
+    }
   };
 
   const recordOvertime = (ot: any) => {
@@ -1214,7 +1973,65 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toISOString(),
     };
     setOvertimeRecords((prev) => [newOT, ...prev]);
+    logAuditEvent({
+      userId: currentUser.id,
+      userName: currentUser.fullName,
+      userRole: currentUserRole?.name || 'Administrator',
+      action: 'RECORD_CREATE',
+      module: 'Operations',
+      resource: 'Overtime Register',
+      recordId: newOT.id,
+      recordTitle: `${newOT.employeeName} (${newOT.hours}h)`,
+      details: `Created overtime claim for ${newOT.employeeName} (${newOT.hours} hours).`,
+      status: 'success',
+    });
     addToast('Overtime record logged and queued for approval.', 'success');
+  };
+
+  const updateOvertime = (id: string, data: Partial<OvertimeRecord>) => {
+    try {
+      setOvertimeRecords((prev) => prev.map((ot) => (ot.id === id ? { ...ot, ...data } : ot)));
+      const ot = overtimeRecords.find((o) => o.id === id);
+      logAuditEvent({
+        userId: currentUser.id,
+        userName: currentUser.fullName,
+        userRole: currentUserRole?.name || 'Administrator',
+        action: 'RECORD_UPDATE',
+        module: 'Operations',
+        resource: 'Overtime Register',
+        recordId: id,
+        recordTitle: ot ? `${ot.employeeName} (${ot.date})` : id,
+        details: `Updated overtime record for ${ot?.employeeName || id}.`,
+        status: 'success',
+      });
+      addToast('Overtime record updated.', 'success');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to update overtime' };
+    }
+  };
+
+  const deleteOvertime = (id: string) => {
+    try {
+      const ot = overtimeRecords.find((o) => o.id === id);
+      setOvertimeRecords((prev) => prev.filter((o) => o.id !== id));
+      logAuditEvent({
+        userId: currentUser.id,
+        userName: currentUser.fullName,
+        userRole: currentUserRole?.name || 'Administrator',
+        action: 'RECORD_DELETE',
+        module: 'Operations',
+        resource: 'Overtime Register',
+        recordId: id,
+        recordTitle: ot ? `${ot.employeeName} (${ot.date})` : id,
+        details: `Deleted overtime claim for ${ot?.employeeName || id} on ${ot?.date}.`,
+        status: 'success',
+      });
+      addToast('Overtime record deleted.', 'success');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to delete overtime' };
+    }
   };
 
   const approveOvertime = (id: string) => {
@@ -1239,6 +2056,18 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toISOString(),
     };
     setEmployeeAdvances((prev) => [newAdv, ...prev]);
+    logAuditEvent({
+      userId: currentUser.id,
+      userName: currentUser.fullName,
+      userRole: currentUserRole?.name || 'Administrator',
+      action: 'RECORD_CREATE',
+      module: 'Payroll',
+      resource: 'Salary Advances',
+      recordId: newAdv.id,
+      recordTitle: `${newAdv.employeeName} (${company.currencySymbol} ${newAdv.requestedAmount.toLocaleString()})`,
+      details: `Submitted salary advance request of ${company.currencySymbol} ${newAdv.requestedAmount} for ${newAdv.employeeName}.`,
+      status: 'success',
+    });
     addToast(`Advance request recorded for ${newAdv.employeeName}.`, 'info');
   };
 
@@ -1249,6 +2078,54 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setGuardAdvancesList((prev) => [newAdv, ...prev]);
     addToast(`Advance registered for ${newAdv.guardName}.`, 'success');
+  };
+
+  const updateAdvance = (id: string, data: Partial<EmployeeAdvance>) => {
+    try {
+      setEmployeeAdvances((prev) => prev.map((a) => (a.id === id ? { ...a, ...data } : a)));
+      setGuardAdvancesList((prev) => prev.map((a) => (a.id === id ? { ...a, ...data } : a)));
+      const adv = employeeAdvances.find((a) => a.id === id) || guardAdvancesList.find((a) => a.id === id);
+      logAuditEvent({
+        userId: currentUser.id,
+        userName: currentUser.fullName,
+        userRole: currentUserRole?.name || 'Administrator',
+        action: 'RECORD_UPDATE',
+        module: 'Payroll',
+        resource: 'Salary Advances',
+        recordId: id,
+        recordTitle: adv ? (adv as any).employeeName || (adv as any).guardName : id,
+        details: `Updated salary advance record ${id}.`,
+        status: 'success',
+      });
+      addToast('Advance record updated.', 'success');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to update advance' };
+    }
+  };
+
+  const deleteAdvance = (id: string) => {
+    try {
+      const adv = employeeAdvances.find((a) => a.id === id) || guardAdvancesList.find((a) => a.id === id);
+      setEmployeeAdvances((prev) => prev.filter((a) => a.id !== id));
+      setGuardAdvancesList((prev) => prev.filter((a) => a.id !== id));
+      logAuditEvent({
+        userId: currentUser.id,
+        userName: currentUser.fullName,
+        userRole: currentUserRole?.name || 'Administrator',
+        action: 'RECORD_DELETE',
+        module: 'Payroll',
+        resource: 'Salary Advances',
+        recordId: id,
+        recordTitle: adv ? (adv as any).employeeName || (adv as any).guardName : id,
+        details: `Deleted salary advance entry ${id}.`,
+        status: 'success',
+      });
+      addToast('Advance record deleted.', 'success');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to delete advance' };
+    }
   };
 
   const approveAdvance = (id: string) => {
@@ -1266,6 +2143,52 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setPayrollPeriods((prev) => prev.map((p) => (p.id === periodId ? { ...p, status: 'APPROVED', approvedBy: currentUser.fullName } : p)));
     setPayrollRecordsList((prev) => prev.map((r) => ({ ...r, status: 'APPROVED' })));
     addToast('Payroll batch approved for disbursement.', 'success');
+  };
+
+  const updatePayrollRecord = (id: string, data: Partial<PayrollRecord>) => {
+    try {
+      setPayrollRecordsList((prev) => prev.map((r) => (r.id === id ? { ...r, ...data } : r)));
+      const rec = payrollRecordsList.find((r) => r.id === id);
+      logAuditEvent({
+        userId: currentUser.id,
+        userName: currentUser.fullName,
+        userRole: currentUserRole?.name || 'Administrator',
+        action: 'RECORD_UPDATE',
+        module: 'Payroll',
+        resource: 'Payroll Records',
+        recordId: id,
+        recordTitle: rec ? `${rec.guardName || rec.employeeName} (${rec.monthYear})` : id,
+        details: `Updated salary slip record for ${rec?.guardName || rec?.employeeName || id}.`,
+        status: 'success',
+      });
+      addToast('Salary slip updated.', 'success');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to update payroll record' };
+    }
+  };
+
+  const deletePayrollRecord = (id: string) => {
+    try {
+      const rec = payrollRecordsList.find((r) => r.id === id);
+      setPayrollRecordsList((prev) => prev.filter((r) => r.id !== id));
+      logAuditEvent({
+        userId: currentUser.id,
+        userName: currentUser.fullName,
+        userRole: currentUserRole?.name || 'Administrator',
+        action: 'RECORD_DELETE',
+        module: 'Payroll',
+        resource: 'Payroll Records',
+        recordId: id,
+        recordTitle: rec ? `${rec.guardName || rec.employeeName} (${rec.monthYear})` : id,
+        details: `Deleted salary slip entry for ${rec?.guardName || rec?.employeeName || id}.`,
+        status: 'success',
+      });
+      addToast('Salary record deleted.', 'success');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to delete payroll record' };
+    }
   };
 
   const disburseSalaryPayment = (pay: Omit<SalaryPayment, 'id' | 'createdAt' | 'status'>) => {
@@ -1289,18 +2212,196 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       issuedQuantity: 0,
     };
     setInventoryItems((prev) => [newItm, ...prev]);
+    logAuditEvent({
+      userId: currentUser.id,
+      userName: currentUser.fullName,
+      userRole: currentUserRole?.name || 'Administrator',
+      action: 'RECORD_CREATE',
+      module: 'Inventory',
+      resource: 'General Items',
+      recordId: newItm.id,
+      recordTitle: newItm.name,
+      details: `Created inventory item ${newItm.name} (${newItm.itemCode}).`,
+      status: 'success',
+    });
+  };
+
+  const updateInventoryItem = (id: string, data: Partial<InventoryItem>) => {
+    try {
+      setInventoryItems((prev) => prev.map((itm) => (itm.id === id ? { ...itm, ...data } : itm)));
+      const itm = inventoryItems.find((i) => i.id === id);
+      logAuditEvent({
+        userId: currentUser.id,
+        userName: currentUser.fullName,
+        userRole: currentUserRole?.name || 'Administrator',
+        action: 'RECORD_UPDATE',
+        module: 'Inventory',
+        resource: 'General Items',
+        recordId: id,
+        recordTitle: itm?.name || id,
+        details: `Updated inventory item ${itm?.name || id}.`,
+        status: 'success',
+      });
+      addToast('Inventory item updated.', 'success');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to update inventory' };
+    }
+  };
+
+  const deleteInventoryItem = (id: string) => {
+    try {
+      const itm = inventoryItems.find((i) => i.id === id);
+      setInventoryItems((prev) => prev.filter((i) => i.id !== id));
+      logAuditEvent({
+        userId: currentUser.id,
+        userName: currentUser.fullName,
+        userRole: currentUserRole?.name || 'Administrator',
+        action: 'RECORD_DELETE',
+        module: 'Inventory',
+        resource: 'General Items',
+        recordId: id,
+        recordTitle: itm?.name,
+        details: `Deleted inventory item ${itm?.name || id}.`,
+        status: 'success',
+      });
+      addToast('Inventory item deleted.', 'success');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to delete inventory' };
+    }
   };
 
   const createUniformItem = (item: Omit<UniformItem, 'id'>) => {
     const newItm: UniformItem = { ...item, id: `uni-${Date.now()}` };
     setUniformStockList((prev) => [newItm, ...prev]);
+    logAuditEvent({
+      userId: currentUser.id,
+      userName: currentUser.fullName,
+      userRole: currentUserRole?.name || 'Administrator',
+      action: 'RECORD_CREATE',
+      module: 'Inventory',
+      resource: 'Uniform Stock',
+      recordId: newItm.id,
+      recordTitle: newItm.name,
+      details: `Added uniform asset ${newItm.name}.`,
+      status: 'success',
+    });
     addToast(`Uniform item ${newItm.name} added to inventory.`, 'success');
+  };
+
+  const updateUniformItem = (id: string, data: Partial<UniformItem>) => {
+    try {
+      setUniformStockList((prev) => prev.map((u) => (u.id === id ? { ...u, ...data } : u)));
+      const u = uniformStockList.find((item) => item.id === id);
+      logAuditEvent({
+        userId: currentUser.id,
+        userName: currentUser.fullName,
+        userRole: currentUserRole?.name || 'Administrator',
+        action: 'RECORD_UPDATE',
+        module: 'Inventory',
+        resource: 'Uniform Stock',
+        recordId: id,
+        recordTitle: u?.name || id,
+        details: `Updated uniform item ${u?.name || id}.`,
+        status: 'success',
+      });
+      addToast('Uniform item updated.', 'success');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to update uniform' };
+    }
+  };
+
+  const deleteUniformItem = (id: string) => {
+    try {
+      const u = uniformStockList.find((item) => item.id === id);
+      setUniformStockList((prev) => prev.filter((item) => item.id !== id));
+      logAuditEvent({
+        userId: currentUser.id,
+        userName: currentUser.fullName,
+        userRole: currentUserRole?.name || 'Administrator',
+        action: 'RECORD_DELETE',
+        module: 'Inventory',
+        resource: 'Uniform Stock',
+        recordId: id,
+        recordTitle: u?.name,
+        details: `Deleted uniform article ${u?.name || id}.`,
+        status: 'success',
+      });
+      addToast('Uniform item deleted.', 'success');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to delete uniform' };
+    }
   };
 
   const createWeaponItem = (item: Omit<WeaponItem, 'id'>) => {
     const newWpn: WeaponItem = { ...item, id: `wpn-${Date.now()}` };
     setWeaponsStockList((prev) => [newWpn, ...prev]);
+    logAuditEvent({
+      userId: currentUser.id,
+      userName: currentUser.fullName,
+      userRole: currentUserRole?.name || 'Administrator',
+      action: 'RECORD_CREATE',
+      module: 'Inventory',
+      resource: 'Weapons Stock',
+      recordId: newWpn.id,
+      recordTitle: `${newWpn.serialNumber} (${newWpn.type})`,
+      details: `Registered weapon ${newWpn.serialNumber} into armory ledger.`,
+      status: 'success',
+    });
     addToast(`Firearm ${newWpn.serialNumber} entered into armory ledger.`, 'success');
+  };
+
+  const updateWeaponItem = (id: string, data: Partial<WeaponItem>) => {
+    try {
+      setWeaponsStockList((prev) => prev.map((w) => (w.id === id ? { ...w, ...data } : w)));
+      const w = weaponsStockList.find((item) => item.id === id);
+      logAuditEvent({
+        userId: currentUser.id,
+        userName: currentUser.fullName,
+        userRole: currentUserRole?.name || 'Administrator',
+        action: 'RECORD_UPDATE',
+        module: 'Inventory',
+        resource: 'Weapons Stock',
+        recordId: id,
+        recordTitle: w?.serialNumber || id,
+        details: `Updated weapon record ${w?.serialNumber || id}.`,
+        status: 'success',
+      });
+      addToast('Firearm record updated.', 'success');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to update firearm' };
+    }
+  };
+
+  const deleteWeaponItem = (id: string) => {
+    try {
+      const wpn = weaponsStockList.find((w) => w.id === id);
+      if (wpn?.status === 'ISSUED') {
+        addToast(`Cannot delete firearm ${wpn.serialNumber}: currently issued to guard ${wpn.assignedGuardName || ''}. Return to vault first.`, 'error');
+        return { success: false, error: 'Firearm currently issued to guard' };
+      }
+      setWeaponsStockList((prev) => prev.filter((w) => w.id !== id));
+      logAuditEvent({
+        userId: currentUser.id,
+        userName: currentUser.fullName,
+        userRole: currentUserRole?.name || 'Administrator',
+        action: 'RECORD_DELETE',
+        module: 'Inventory',
+        resource: 'Weapons Stock',
+        recordId: id,
+        recordTitle: wpn?.serialNumber,
+        details: `Deleted firearm record ${wpn?.serialNumber || id} from armory ledger.`,
+        status: 'success',
+      });
+      addToast('Firearm removed from armory ledger.', 'success');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to delete firearm' };
+    }
   };
 
   const issueWeaponToGuard = (weaponId: string, guardId: string) => {
@@ -1370,6 +2471,30 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateControlledItem = (id: string, data: Partial<ControlledItem>) => {
     setControlledItems((prev) => prev.map((c) => (c.id === id ? { ...c, ...data } : c)));
+    addToast('Controlled item updated.', 'success');
+  };
+
+  const deleteControlledItem = (id: string) => {
+    try {
+      const item = controlledItems.find((c) => c.id === id);
+      setControlledItems((prev) => prev.filter((c) => c.id !== id));
+      logAuditEvent({
+        userId: currentUser.id,
+        userName: currentUser.fullName,
+        userRole: currentUserRole?.name || 'Administrator',
+        action: 'RECORD_DELETE',
+        module: 'Inventory',
+        resource: 'Controlled Items',
+        recordId: id,
+        recordTitle: item?.serialNumber || item?.recordNumber,
+        details: `Deleted controlled asset record ${item?.serialNumber || id}.`,
+        status: 'success',
+      });
+      addToast('Controlled item record deleted.', 'success');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to delete controlled asset' };
+    }
   };
 
   const recordControlledMovement = (mov: Omit<ControlledCustodyMovement, 'id' | 'movementNumber'>) => {
@@ -1560,6 +2685,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         resetPasswordWithToken,
         createUser,
         updateUser,
+        deleteUser,
         setUserStatus,
         adminResetPassword,
         getUserPermissions,
@@ -1569,6 +2695,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setRoles,
         createRole,
         updateRole,
+        deleteRole,
         setRoleStatus,
         updateRolePermissions,
 
@@ -1604,11 +2731,20 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         bankAccounts,
         suppliers,
         createVoucher,
+        updateVoucher,
+        deleteVoucher,
         approveVoucher,
         postVoucher,
         reverseVoucher,
         createAccount,
         updateAccount,
+        deleteAccount,
+        createBankAccount,
+        updateBankAccount,
+        deleteBankAccount,
+        createCashAccount,
+        updateCashAccount,
+        deleteCashAccount,
 
         // Clients
         clients,
@@ -1620,14 +2756,21 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addClient,
         createClient: (c: any) => addClient(c),
         updateClient,
+        deleteClient,
+        restoreClient,
         addContract,
         createContract: (c: any) => addContract(c),
         updateContract,
+        deleteContract,
         addSecuritySite,
         createSecuritySite: (s: any) => addSecuritySite(s),
         updateSecuritySite,
+        deleteSecuritySite,
         createClientInvoice,
+        updateClientInvoice,
+        deleteClientInvoice,
         recordClientReceipt,
+        deleteClientReceipt,
         recordInvoicePayment,
 
         // Operations
@@ -1641,11 +2784,19 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addGuard,
         createGuard,
         updateGuard,
+        deleteGuard,
+        restoreGuard,
         addGuardAssignment,
         createGuardAssignment: (a: any) => addGuardAssignment(a),
+        updateGuardAssignment,
+        deleteGuardAssignment,
         recordDailyDeployment,
         recordAttendance,
+        updateAttendance,
+        deleteAttendance,
         recordOvertime,
+        updateOvertime,
+        deleteOvertime,
         approveOvertime,
         rejectOvertime,
 
@@ -1662,9 +2813,13 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         payrollRecords: payrollRecordsList,
         salaryPayments,
         requestAdvance,
+        updateAdvance,
+        deleteAdvance,
         approveAdvance,
         processPayrollPeriod,
         approvePayrollPeriod,
+        updatePayrollRecord,
+        deletePayrollRecord,
         disburseSalaryPayment,
 
         // Inventory & Armory
@@ -1672,10 +2827,14 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         inventoryItems,
         uniformStock: uniformStockList,
         createUniformItem,
+        updateUniformItem,
+        deleteUniformItem,
         weapons: weaponsStockList,
         weaponsStock: weaponsStockList,
         createWeapon: (item: any) => createWeaponItem(item),
         createWeaponItem,
+        updateWeaponItem,
+        deleteWeaponItem,
         issueWeapon: (weaponId: string, guardId?: string) => {
           if (guardId) issueWeaponToGuard(weaponId, guardId);
         },
@@ -1702,6 +2861,8 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         equipmentRecords,
         fixedAssets,
         addInventoryItem,
+        updateInventoryItem,
+        deleteInventoryItem,
         recordStockMovement,
         issueUniformToGuard,
         returnUniformFromGuard,
@@ -1713,6 +2874,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         controlledIncidents,
         registerControlledItem,
         updateControlledItem,
+        deleteControlledItem,
         recordControlledMovement,
         reportControlledIncident,
 

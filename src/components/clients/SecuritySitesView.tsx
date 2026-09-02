@@ -17,11 +17,20 @@ import {
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { SecuritySite } from '../../types';
+import { RowActionButtons } from '../common/RowActionButtons';
+import { DeleteConfirmationModal } from '../common/DeleteConfirmationModal';
+import { RecordDetailModal } from '../common/RecordDetailModal';
 
 export const SecuritySitesView: React.FC = () => {
-  const { securitySites, clients, createSecuritySite } = useERP();
+  const { securitySites, clients, createSecuritySite, updateSecuritySite, deleteSecuritySite, hasPermission, addToast } = useERP();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingSite, setEditingSite] = useState<SecuritySite | null>(null);
+  const [deletingSite, setDeletingSite] = useState<SecuritySite | null>(null);
+  const [detailSite, setDetailSite] = useState<SecuritySite | null>(null);
+
+  const canEdit = hasPermission('SITES_EDIT') || hasPermission('OPERATIONS_MANAGE') || hasPermission('ALL_ACCESS');
+  const canDelete = hasPermission('SITES_DELETE') || hasPermission('OPERATIONS_MANAGE') || hasPermission('ALL_ACCESS');
 
   const [formData, setFormData] = useState<Partial<SecuritySite>>({
     clientId: clients[0]?.id || '',
@@ -38,31 +47,101 @@ export const SecuritySitesView: React.FC = () => {
     status: 'ACTIVE',
   });
 
+  const handleOpenCreate = () => {
+    setEditingSite(null);
+    setFormData({
+      clientId: clients[0]?.id || '',
+      name: '',
+      code: '',
+      address: '',
+      city: 'Denver',
+      siteInchargeName: '',
+      siteInchargePhone: '',
+      dayGuardsRequired: 4,
+      nightGuardsRequired: 4,
+      armedGuardsRequired: 1,
+      specialInstructions: 'Strict access control and visitor badge logging required at main reception gate.',
+      status: 'ACTIVE',
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (site: SecuritySite) => {
+    setEditingSite(site);
+    setFormData({
+      clientId: site.clientId,
+      name: site.name,
+      code: site.code,
+      address: site.address,
+      city: site.city,
+      siteInchargeName: site.siteInchargeName,
+      siteInchargePhone: site.siteInchargePhone,
+      dayGuardsRequired: site.dayGuardsRequired,
+      nightGuardsRequired: site.nightGuardsRequired,
+      armedGuardsRequired: site.armedGuardsRequired,
+      specialInstructions: site.specialInstructions,
+      status: site.status,
+    });
+    setIsModalOpen(true);
+  };
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name) return;
 
-    const count = securitySites.length + 1;
-    const siteCode = `STE-${String(count).padStart(3, '0')}`;
     const selectedClient = clients.find((c) => c.id === formData.clientId) || clients[0];
 
-    createSecuritySite({
-      code: siteCode,
-      name: formData.name || '',
-      clientId: selectedClient.id,
-      clientName: selectedClient.name,
-      address: formData.address || '',
-      city: formData.city || 'Denver',
-      siteInchargeName: formData.siteInchargeName || 'Captain In-Charge',
-      siteInchargePhone: formData.siteInchargePhone || '+92 300 1234567',
-      dayGuardsRequired: Number(formData.dayGuardsRequired) || 0,
-      nightGuardsRequired: Number(formData.nightGuardsRequired) || 0,
-      armedGuardsRequired: Number(formData.armedGuardsRequired) || 0,
-      specialInstructions: formData.specialInstructions || '',
-      status: 'ACTIVE',
-    });
+    if (editingSite) {
+      updateSecuritySite(editingSite.id, {
+        name: formData.name || '',
+        clientId: selectedClient.id,
+        clientName: selectedClient.name,
+        address: formData.address || '',
+        city: formData.city || 'Denver',
+        siteInchargeName: formData.siteInchargeName || '',
+        siteInchargePhone: formData.siteInchargePhone || '',
+        dayGuardsRequired: Number(formData.dayGuardsRequired) || 0,
+        nightGuardsRequired: Number(formData.nightGuardsRequired) || 0,
+        armedGuardsRequired: Number(formData.armedGuardsRequired) || 0,
+        specialInstructions: formData.specialInstructions || '',
+        status: formData.status as any || 'ACTIVE',
+      });
+      addToast(`Security site '${formData.name}' updated successfully`, 'success');
+    } else {
+      const count = securitySites.length + 1;
+      const siteCode = `STE-${String(count).padStart(3, '0')}`;
+
+      createSecuritySite({
+        code: siteCode,
+        name: formData.name || '',
+        clientId: selectedClient.id,
+        clientName: selectedClient.name,
+        address: formData.address || '',
+        city: formData.city || 'Denver',
+        siteInchargeName: formData.siteInchargeName || 'Captain In-Charge',
+        siteInchargePhone: formData.siteInchargePhone || '+92 300 1234567',
+        dayGuardsRequired: Number(formData.dayGuardsRequired) || 0,
+        nightGuardsRequired: Number(formData.nightGuardsRequired) || 0,
+        armedGuardsRequired: Number(formData.armedGuardsRequired) || 0,
+        specialInstructions: formData.specialInstructions || '',
+        status: 'ACTIVE',
+      });
+      addToast(`Security site '${formData.name}' created successfully`, 'success');
+    }
 
     setIsModalOpen(false);
+    setEditingSite(null);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deletingSite) return;
+    const res = deleteSecuritySite(deletingSite.id);
+    if (res.success) {
+      addToast(`Security site '${deletingSite.name}' deleted successfully`, 'success');
+      setDeletingSite(null);
+    } else {
+      addToast(res.error || 'Failed to delete site', 'error');
+    }
   };
 
   const filteredSites = securitySites.filter((s) => {
@@ -92,7 +171,7 @@ export const SecuritySitesView: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setIsModalOpen(true)}
+            onClick={handleOpenCreate}
             className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
@@ -133,9 +212,22 @@ export const SecuritySitesView: React.FC = () => {
                 <h3 className="font-extrabold text-sm text-slate-900 mt-0.5">{site.name}</h3>
                 <p className="text-xs font-semibold text-slate-600">{site.clientName}</p>
               </div>
-              <span className="px-2 py-0.5 rounded font-mono font-bold text-[10px] bg-emerald-100 text-emerald-800">
-                {site.status}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="px-2 py-0.5 rounded font-mono font-bold text-[10px] bg-emerald-100 text-emerald-800">
+                  {site.status}
+                </span>
+                <RowActionButtons
+                  size="sm"
+                  canEdit={canEdit}
+                  canDelete={canDelete}
+                  onView={() => setDetailSite(site)}
+                  onEdit={() => handleOpenEdit(site)}
+                  onDelete={() => setDeletingSite(site)}
+                  viewTooltip={`View ${site.name} site details`}
+                  editTooltip={`Edit ${site.name}`}
+                  deleteTooltip={`Delete ${site.name}`}
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-3 gap-2 p-3 bg-slate-50 rounded-xl text-center font-mono">
@@ -184,9 +276,9 @@ export const SecuritySitesView: React.FC = () => {
           <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95">
             <div className="bg-slate-900 px-6 py-4 text-white flex items-center justify-between">
               <h3 className="font-extrabold text-base tracking-tight font-['Space_Grotesk']">
-                Register Protected Site Location
+                {editingSite ? `Edit Site (${editingSite.code})` : 'Register Protected Site Location'}
               </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => { setIsModalOpen(false); setEditingSite(null); }} className="text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -299,7 +391,7 @@ export const SecuritySitesView: React.FC = () => {
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => { setIsModalOpen(false); setEditingSite(null); }}
                   className="px-4 py-2 font-semibold text-slate-600 hover:text-slate-900 rounded-xl"
                 >
                   Cancel
@@ -308,12 +400,62 @@ export const SecuritySitesView: React.FC = () => {
                   type="submit"
                   className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-xs transition-all"
                 >
-                  Save Security Site
+                  {editingSite ? 'Save Changes' : 'Save Security Site'}
                 </button>
               </div>
             </form>
           </div>
         </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingSite && (
+        <DeleteConfirmationModal
+          isOpen={!!deletingSite}
+          onClose={() => setDeletingSite(null)}
+          onConfirm={handleConfirmDelete}
+          recordTitle={`${deletingSite.name} (${deletingSite.code})`}
+          recordId={deletingSite.code}
+          moduleName="Security Sites"
+          warningMessage="Deleting this physical site will remove post order configurations. Active guard deployment rosters at this site must be reassigned."
+        />
+      )}
+
+      {/* Record Detail Modal */}
+      {detailSite && (
+        <RecordDetailModal
+          isOpen={!!detailSite}
+          onClose={() => setDetailSite(null)}
+          title={detailSite.name}
+          subtitle={`Site Code: ${detailSite.code} | Client: ${detailSite.clientName}`}
+          badge={{
+            text: detailSite.status || 'ACTIVE',
+            variant: detailSite.status === 'ACTIVE' ? 'emerald' : 'slate',
+          }}
+          onEdit={() => {
+            const s = detailSite;
+            setDetailSite(null);
+            handleOpenEdit(s);
+          }}
+          onDelete={() => {
+            const s = detailSite;
+            setDetailSite(null);
+            setDeletingSite(s);
+          }}
+          canEdit={canEdit}
+          canDelete={canDelete}
+          fields={[
+            { label: 'Site Code', value: detailSite.code, isMono: true },
+            { label: 'Client Name', value: detailSite.clientName },
+            { label: 'City', value: detailSite.city },
+            { label: 'Physical Address', value: detailSite.address, fullWidth: true },
+            { label: 'Day Shift Roster', value: `${detailSite.dayGuardsRequired} Guards Required` },
+            { label: 'Night Shift Roster', value: `${detailSite.nightGuardsRequired} Guards Required` },
+            { label: 'Armed Posts', value: `${detailSite.armedGuardsRequired} Armed Guards` },
+            { label: 'Site In-Charge / Supervisor', value: `${detailSite.siteInchargeName} (${detailSite.siteInchargePhone})` },
+            { label: 'Post Orders / Special Instructions', value: detailSite.specialInstructions || 'None', fullWidth: true },
+          ]}
+        />
       )}
     </div>
   );

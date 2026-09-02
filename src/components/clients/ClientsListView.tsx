@@ -17,11 +17,20 @@ import {
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { Client } from '../../types';
+import { RowActionButtons } from '../common/RowActionButtons';
+import { DeleteConfirmationModal } from '../common/DeleteConfirmationModal';
+import { RecordDetailModal } from '../common/RecordDetailModal';
 
 export const ClientsListView: React.FC = () => {
-  const { clients, createClient } = useERP();
+  const { clients, createClient, updateClient, deleteClient, hasPermission, addToast } = useERP();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [deletingClient, setDeletingClient] = useState<Client | null>(null);
+  const [detailClient, setDetailClient] = useState<Client | null>(null);
+
+  const canEdit = hasPermission('CLIENTS_EDIT') || hasPermission('CLIENTS_MANAGE') || hasPermission('ALL_ACCESS');
+  const canDelete = hasPermission('CLIENTS_DELETE') || hasPermission('CLIENTS_MANAGE') || hasPermission('ALL_ACCESS');
 
   const [formData, setFormData] = useState<Partial<Client>>({
     name: '',
@@ -35,28 +44,8 @@ export const ClientsListView: React.FC = () => {
     status: 'ACTIVE',
   });
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name) return;
-
-    const count = clients.length + 1;
-    const code = `CLT-${String(count).padStart(3, '0')}`;
-
-    createClient({
-      code,
-      name: formData.name || '',
-      category: formData.category || 'Corporate',
-      contactPerson: formData.contactPerson || '',
-      email: formData.email || '',
-      phone: formData.phone || '',
-      address: formData.address || '',
-      city: formData.city || 'Denver',
-      glReceivableCode: '1130',
-      paymentTermsDays: Number(formData.paymentTermsDays) || 30,
-      status: 'ACTIVE',
-    });
-
-    setIsModalOpen(false);
+  const handleOpenCreate = () => {
+    setEditingClient(null);
     setFormData({
       name: '',
       category: 'Commercial Bank',
@@ -66,7 +55,78 @@ export const ClientsListView: React.FC = () => {
       address: '',
       city: 'Denver',
       paymentTermsDays: 30,
+      status: 'ACTIVE',
     });
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (client: Client) => {
+    setEditingClient(client);
+    setFormData({
+      name: client.name || client.displayName || '',
+      category: client.category || 'Commercial Bank',
+      contactPerson: client.contactPerson || '',
+      email: client.email || '',
+      phone: client.phone || '',
+      address: client.address || '',
+      city: client.city || 'Denver',
+      paymentTermsDays: client.paymentTermsDays || 30,
+      status: client.status || 'ACTIVE',
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name) return;
+
+    if (editingClient) {
+      updateClient(editingClient.id, {
+        name: formData.name,
+        displayName: formData.name,
+        category: formData.category,
+        contactPerson: formData.contactPerson,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        city: formData.city,
+        paymentTermsDays: Number(formData.paymentTermsDays) || 30,
+        status: formData.status,
+      });
+      addToast(`Client '${formData.name}' updated successfully`, 'success');
+    } else {
+      const count = clients.length + 1;
+      const code = `CLT-${String(count).padStart(3, '0')}`;
+
+      createClient({
+        code,
+        name: formData.name || '',
+        category: formData.category || 'Corporate',
+        contactPerson: formData.contactPerson || '',
+        email: formData.email || '',
+        phone: formData.phone || '',
+        address: formData.address || '',
+        city: formData.city || 'Denver',
+        glReceivableCode: '1130',
+        paymentTermsDays: Number(formData.paymentTermsDays) || 30,
+        status: 'ACTIVE',
+      });
+      addToast(`Client '${formData.name}' created successfully`, 'success');
+    }
+
+    setIsModalOpen(false);
+    setEditingClient(null);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deletingClient) return;
+    const res = deleteClient(deletingClient.id);
+    if (res.success) {
+      addToast(`Client '${deletingClient.name}' archived successfully`, 'success');
+      setDeletingClient(null);
+    } else {
+      addToast(res.error || 'Failed to archive client', 'error');
+    }
   };
 
   const filteredClients = clients.filter((c) => {
@@ -96,7 +156,7 @@ export const ClientsListView: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setIsModalOpen(true)}
+            onClick={handleOpenCreate}
             className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
@@ -136,9 +196,22 @@ export const ClientsListView: React.FC = () => {
                 </span>
                 <h3 className="font-extrabold text-sm text-slate-900 mt-0.5">{client.name}</h3>
               </div>
-              <span className="px-2 py-0.5 rounded font-mono font-bold text-[10px] bg-emerald-100 text-emerald-800">
-                {client.status}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="px-2 py-0.5 rounded font-mono font-bold text-[10px] bg-emerald-100 text-emerald-800">
+                  {client.status}
+                </span>
+                <RowActionButtons
+                  size="sm"
+                  canEdit={canEdit}
+                  canDelete={canDelete}
+                  onView={() => setDetailClient(client)}
+                  onEdit={() => handleOpenEdit(client)}
+                  onDelete={() => setDeletingClient(client)}
+                  viewTooltip={`View ${client.name} profile`}
+                  editTooltip={`Edit ${client.name} details`}
+                  deleteTooltip={`Archive ${client.name}`}
+                />
+              </div>
             </div>
 
             <div className="space-y-2 text-xs text-slate-600 pt-2 border-t border-slate-100">
@@ -174,9 +247,9 @@ export const ClientsListView: React.FC = () => {
           <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95">
             <div className="bg-slate-900 px-6 py-4 text-white flex items-center justify-between">
               <h3 className="font-extrabold text-base tracking-tight font-['Space_Grotesk']">
-                Register New Client Account
+                {editingClient ? 'Edit Client Account' : 'Register New Client Account'}
               </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => { setIsModalOpen(false); setEditingClient(null); }} className="text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -283,7 +356,7 @@ export const ClientsListView: React.FC = () => {
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => { setIsModalOpen(false); setEditingClient(null); }}
                   className="px-4 py-2 font-semibold text-slate-600 hover:text-slate-900 rounded-xl"
                 >
                   Cancel
@@ -292,12 +365,63 @@ export const ClientsListView: React.FC = () => {
                   type="submit"
                   className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-xs transition-all"
                 >
-                  Create Client
+                  {editingClient ? 'Save Changes' : 'Create Client'}
                 </button>
               </div>
             </form>
           </div>
         </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingClient && (
+        <DeleteConfirmationModal
+          isOpen={!!deletingClient}
+          onClose={() => setDeletingClient(null)}
+          onConfirm={handleConfirmDelete}
+          recordTitle={deletingClient.name}
+          recordId={deletingClient.code}
+          moduleName="Clients"
+          isArchive={true}
+          warningMessage="Archiving this client will prevent new contracts or invoices from being drafted. Existing SLA historical contracts and financial vouchers remain securely linked."
+        />
+      )}
+
+      {/* View Details Modal */}
+      {detailClient && (
+        <RecordDetailModal
+          isOpen={!!detailClient}
+          onClose={() => setDetailClient(null)}
+          title={detailClient.name}
+          subtitle={`Client Account Code: ${detailClient.code}`}
+          badge={{
+            text: detailClient.status || 'ACTIVE',
+            variant: detailClient.status === 'ACTIVE' ? 'emerald' : 'slate',
+          }}
+          onEdit={() => {
+            const c = detailClient;
+            setDetailClient(null);
+            handleOpenEdit(c);
+          }}
+          onDelete={() => {
+            const c = detailClient;
+            setDetailClient(null);
+            setDeletingClient(c);
+          }}
+          canEdit={canEdit}
+          canDelete={canDelete}
+          fields={[
+            { label: 'Client Code', value: detailClient.code, isMono: true },
+            { label: 'Category', value: detailClient.category },
+            { label: 'Primary Contact Person', value: detailClient.contactPerson },
+            { label: 'Official Phone', value: detailClient.phone, isMono: true },
+            { label: 'Billing Email', value: detailClient.email },
+            { label: 'Headquarters City', value: detailClient.city },
+            { label: 'Payment Terms', value: `${detailClient.paymentTermsDays || 30} Days Net`, isMono: true },
+            { label: 'GL Receivable Code', value: detailClient.glReceivableCode || '1130', isMono: true },
+            { label: 'Street Address', value: detailClient.address, fullWidth: true },
+          ]}
+        />
       )}
     </div>
   );

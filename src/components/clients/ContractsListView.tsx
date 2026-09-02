@@ -16,11 +16,20 @@ import {
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { Contract } from '../../types';
+import { RowActionButtons } from '../common/RowActionButtons';
+import { DeleteConfirmationModal } from '../common/DeleteConfirmationModal';
+import { RecordDetailModal } from '../common/RecordDetailModal';
 
 export const ContractsListView: React.FC = () => {
-  const { company, contracts, clients, createContract } = useERP();
+  const { company, contracts, clients, createContract, updateContract, deleteContract, hasPermission, addToast } = useERP();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingContract, setEditingContract] = useState<Contract | null>(null);
+  const [deletingContract, setDeletingContract] = useState<Contract | null>(null);
+  const [detailContract, setDetailContract] = useState<Contract | null>(null);
+
+  const canEdit = hasPermission('CONTRACTS_EDIT') || hasPermission('CLIENTS_MANAGE') || hasPermission('ALL_ACCESS');
+  const canDelete = hasPermission('CONTRACTS_DELETE') || hasPermission('CLIENTS_MANAGE') || hasPermission('ALL_ACCESS');
 
   const [formData, setFormData] = useState<Partial<Contract>>({
     clientId: clients[0]?.id || '',
@@ -38,36 +47,110 @@ export const ContractsListView: React.FC = () => {
     (Number(formData.unarmedGuardsCount) || 0) * (Number(formData.unarmedRatePerGuard) || 0) +
     (Number(formData.armedGuardsCount) || 0) * (Number(formData.armedRatePerGuard) || 0);
 
+  const handleOpenCreate = () => {
+    setEditingContract(null);
+    setFormData({
+      clientId: clients[0]?.id || '',
+      startDate: '2026-09-01',
+      endDate: '2027-08-31',
+      unarmedGuardsCount: 10,
+      armedGuardsCount: 2,
+      unarmedRatePerGuard: 35000,
+      armedRatePerGuard: 48000,
+      billingFrequency: 'MONTHLY',
+      status: 'ACTIVE',
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (c: Contract) => {
+    setEditingContract(c);
+    setFormData({
+      clientId: c.clientId,
+      startDate: c.startDate,
+      endDate: c.endDate,
+      unarmedGuardsCount: c.unarmedGuardsCount || 0,
+      armedGuardsCount: c.armedGuardsCount || 0,
+      unarmedRatePerGuard: c.unarmedRatePerGuard || 35000,
+      armedRatePerGuard: c.armedRatePerGuard || 48000,
+      billingFrequency: c.billingFrequency || 'MONTHLY',
+      status: c.status || 'ACTIVE',
+    });
+    setIsModalOpen(true);
+  };
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    const count = contracts.length + 1;
-    const contractNumber = `CNT-MSS-2026-${String(count).padStart(3, '0')}`;
     const selectedClient = clients.find((c) => c.id === formData.clientId) || clients[0];
 
-    createContract({
-      contractNumber,
-      title: `${selectedClient.displayName || selectedClient.legalName || selectedClient.name || 'Client'} Security SLA`,
-      clientId: selectedClient.id,
-      clientName: selectedClient.displayName || selectedClient.legalName || selectedClient.name || 'Client',
-      type: 'Monthly Security Services',
-      startDate: formData.startDate || '2026-09-01',
-      endDate: formData.endDate || '2027-08-31',
-      unarmedGuardsCount: Number(formData.unarmedGuardsCount) || 0,
-      armedGuardsCount: Number(formData.armedGuardsCount) || 0,
-      unarmedRatePerGuard: Number(formData.unarmedRatePerGuard) || 0,
-      armedRatePerGuard: Number(formData.armedRatePerGuard) || 0,
-      monthlyRate: totalMonthlyValue,
-      contractValue: totalMonthlyValue * 12,
-      totalMonthlyValue,
-      billingMethod: 'Per Guard Billing',
-      billingFrequency: 'Monthly',
-      noticePeriodDays: 30,
-      autoRenewal: true,
-      status: 'ACTIVE',
-    } as any);
+    if (editingContract) {
+      updateContract(editingContract.id, {
+        clientId: selectedClient.id,
+        clientName: selectedClient.displayName || selectedClient.legalName || selectedClient.name || 'Client',
+        startDate: formData.startDate || editingContract.startDate,
+        endDate: formData.endDate || editingContract.endDate,
+        unarmedGuardsCount: Number(formData.unarmedGuardsCount) || 0,
+        armedGuardsCount: Number(formData.armedGuardsCount) || 0,
+        unarmedRatePerGuard: Number(formData.unarmedRatePerGuard) || 0,
+        armedRatePerGuard: Number(formData.armedRatePerGuard) || 0,
+        monthlyRate: totalMonthlyValue,
+        contractValue: totalMonthlyValue * 12,
+        totalMonthlyValue,
+        status: formData.status as any || 'ACTIVE',
+      });
+      addToast(`Contract ${editingContract.contractNumber} updated successfully`, 'success');
+    } else {
+      const count = contracts.length + 1;
+      const contractNumber = `CNT-MSS-2026-${String(count).padStart(3, '0')}`;
+
+      createContract({
+        contractNumber,
+        title: `${selectedClient.displayName || selectedClient.legalName || selectedClient.name || 'Client'} Security SLA`,
+        clientId: selectedClient.id,
+        clientName: selectedClient.displayName || selectedClient.legalName || selectedClient.name || 'Client',
+        type: 'Monthly Security Services',
+        startDate: formData.startDate || '2026-09-01',
+        endDate: formData.endDate || '2027-08-31',
+        unarmedGuardsCount: Number(formData.unarmedGuardsCount) || 0,
+        armedGuardsCount: Number(formData.armedGuardsCount) || 0,
+        unarmedRatePerGuard: Number(formData.unarmedRatePerGuard) || 0,
+        armedRatePerGuard: Number(formData.armedRatePerGuard) || 0,
+        monthlyRate: totalMonthlyValue,
+        contractValue: totalMonthlyValue * 12,
+        totalMonthlyValue,
+        billingMethod: 'Per Guard Billing',
+        billingFrequency: 'Monthly',
+        noticePeriodDays: 30,
+        autoRenewal: true,
+        status: 'ACTIVE',
+      } as any);
+      addToast(`Contract ${contractNumber} drafted successfully`, 'success');
+    }
 
     setIsModalOpen(false);
+    setEditingContract(null);
   };
+
+  const handleConfirmDelete = () => {
+    if (!deletingContract) return;
+    const res = deleteContract(deletingContract.id);
+    if (res.success) {
+      addToast(`Contract ${deletingContract.contractNumber} deleted successfully`, 'success');
+      setDeletingContract(null);
+    } else {
+      addToast(res.error || 'Failed to delete contract', 'error');
+    }
+  };
+
+  const filteredContracts = contracts.filter((c) => {
+    if (!searchTerm) return true;
+    const q = searchTerm.toLowerCase();
+    return (
+      c.contractNumber.toLowerCase().includes(q) ||
+      c.clientName.toLowerCase().includes(q) ||
+      (c.status && c.status.toLowerCase().includes(q))
+    );
+  });
 
   return (
     <div className="space-y-6">
@@ -85,7 +168,7 @@ export const ContractsListView: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setIsModalOpen(true)}
+            onClick={handleOpenCreate}
             className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
@@ -97,7 +180,7 @@ export const ContractsListView: React.FC = () => {
       {/* Contracts Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="overflow-x-auto max-w-full">
-          <table className="w-full text-left text-xs min-w-[750px]">
+          <table className="w-full text-left text-xs min-w-[850px]">
             <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono border-b border-slate-200">
               <tr>
                 <th className="px-6 py-3.5">Contract #</th>
@@ -107,10 +190,11 @@ export const ContractsListView: React.FC = () => {
                 <th className="px-4 py-3.5 text-center">Armed Guards</th>
                 <th className="px-4 py-3.5 text-right">Monthly Billing</th>
                 <th className="px-6 py-3.5 text-center">Status</th>
+                <th className="px-6 py-3.5 text-right font-mono font-bold text-slate-500">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {contracts.map((c) => (
+              {filteredContracts.map((c) => (
                 <tr key={c.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-3.5 font-mono font-bold text-slate-900">{c.contractNumber}</td>
                   <td className="px-4 py-3.5 font-bold text-slate-900">{c.clientName}</td>
@@ -133,6 +217,19 @@ export const ContractsListView: React.FC = () => {
                       {c.status}
                     </span>
                   </td>
+                  <td className="px-6 py-3.5 text-right">
+                    <RowActionButtons
+                      size="sm"
+                      canEdit={canEdit}
+                      canDelete={canDelete}
+                      onView={() => setDetailContract(c)}
+                      onEdit={() => handleOpenEdit(c)}
+                      onDelete={() => setDeletingContract(c)}
+                      viewTooltip={`View ${c.contractNumber} details`}
+                      editTooltip={`Edit ${c.contractNumber}`}
+                      deleteTooltip={`Delete ${c.contractNumber}`}
+                    />
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -140,15 +237,15 @@ export const ContractsListView: React.FC = () => {
         </div>
       </div>
 
-      {/* Add Contract Modal */}
+      {/* Add / Edit Contract Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
           <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95">
             <div className="bg-slate-900 px-6 py-4 text-white flex items-center justify-between">
               <h3 className="font-extrabold text-base tracking-tight font-['Space_Grotesk']">
-                Draft Security Contract Agreement
+                {editingContract ? `Edit Security Contract (${editingContract.contractNumber})` : 'Draft Security Contract Agreement'}
               </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => { setIsModalOpen(false); setEditingContract(null); }} className="text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -249,7 +346,7 @@ export const ContractsListView: React.FC = () => {
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => { setIsModalOpen(false); setEditingContract(null); }}
                   className="px-4 py-2 font-semibold text-slate-600 hover:text-slate-900 rounded-xl"
                 >
                   Cancel
@@ -258,12 +355,61 @@ export const ContractsListView: React.FC = () => {
                   type="submit"
                   className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-xs transition-all"
                 >
-                  Save Contract
+                  {editingContract ? 'Save Changes' : 'Draft Contract'}
                 </button>
               </div>
             </form>
           </div>
         </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingContract && (
+        <DeleteConfirmationModal
+          isOpen={!!deletingContract}
+          onClose={() => setDeletingContract(null)}
+          onConfirm={handleConfirmDelete}
+          recordTitle={`${deletingContract.contractNumber} (${deletingContract.clientName})`}
+          recordId={deletingContract.contractNumber}
+          moduleName="Contracts & SLAs"
+          warningMessage="Deleting this contract agreement will permanently remove the SLA terms and scheduled monthly billing amount. Linked historical invoices will remain intact."
+        />
+      )}
+
+      {/* View Details Modal */}
+      {detailContract && (
+        <RecordDetailModal
+          isOpen={!!detailContract}
+          onClose={() => setDetailContract(null)}
+          title={detailContract.contractNumber}
+          subtitle={`Client: ${detailContract.clientName}`}
+          badge={{
+            text: detailContract.status || 'ACTIVE',
+            variant: detailContract.status === 'ACTIVE' ? 'emerald' : 'slate',
+          }}
+          onEdit={() => {
+            const c = detailContract;
+            setDetailContract(null);
+            handleOpenEdit(c);
+          }}
+          onDelete={() => {
+            const c = detailContract;
+            setDetailContract(null);
+            setDeletingContract(c);
+          }}
+          canEdit={canEdit}
+          canDelete={canDelete}
+          fields={[
+            { label: 'Contract Number', value: detailContract.contractNumber, isMono: true },
+            { label: 'Client Name', value: detailContract.clientName },
+            { label: 'Start Date', value: detailContract.startDate, isMono: true },
+            { label: 'Renewal / End Date', value: detailContract.endDate, isMono: true },
+            { label: 'Unarmed Guards Required', value: `${detailContract.unarmedGuardsCount || 0} guards @ ${company.currencySymbol}${(detailContract.unarmedRatePerGuard || 0).toLocaleString()}` },
+            { label: 'Armed Guards Required', value: `${detailContract.armedGuardsCount || 0} guards @ ${company.currencySymbol}${(detailContract.armedRatePerGuard || 0).toLocaleString()}` },
+            { label: 'Monthly Billing Value', value: `${company.currencySymbol} ${(detailContract.totalMonthlyValue || detailContract.monthlyRate || 0).toLocaleString()}`, isMono: true },
+            { label: 'Annual Value', value: `${company.currencySymbol} ${(detailContract.contractValue || 0).toLocaleString()}`, isMono: true },
+          ]}
+        />
       )}
     </div>
   );
