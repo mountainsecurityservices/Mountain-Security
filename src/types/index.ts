@@ -624,6 +624,7 @@ export interface GuardPersonnel {
   permanentAddress: string;
   emergencyContactName: string;
   emergencyContactPhone: string;
+  emergencyContact?: string;
   profilePhoto?: string;
   joiningDate: string;
   joinDate?: string;
@@ -641,6 +642,7 @@ export interface GuardPersonnel {
   gunLicenseNumber?: string;
   weaponLicenseNumber?: string;
   monthlyBasicSalary?: number;
+  allowances?: number;
   uniformSizeShirt?: string; // M, L, XL
   uniformSizePants?: string; // 32, 34, 36
   shoeSize?: string; // 8, 9, 10

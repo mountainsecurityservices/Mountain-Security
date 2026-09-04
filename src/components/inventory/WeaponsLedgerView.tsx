@@ -17,12 +17,21 @@ import {
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { WeaponItem } from '../../types';
+import { RowActionButtons } from '../common/RowActionButtons';
+import { DeleteConfirmationModal } from '../common/DeleteConfirmationModal';
+import { RecordDetailModal } from '../common/RecordDetailModal';
 
 export const WeaponsLedgerView: React.FC = () => {
-  const { weapons, guards, securitySites, createWeapon, issueWeapon, returnWeapon } = useERP();
+  const { weapons, guards, securitySites, createWeapon, updateWeaponItem, deleteWeaponItem, issueWeapon, returnWeapon, hasPermission, addToast } = useERP();
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingWeapon, setEditingWeapon] = useState<WeaponItem | null>(null);
+  const [deletingWeapon, setDeletingWeapon] = useState<WeaponItem | null>(null);
+  const [detailWeapon, setDetailWeapon] = useState<WeaponItem | null>(null);
   const [issueModalWeapon, setIssueModalWeapon] = useState<WeaponItem | null>(null);
+
+  const canEdit = hasPermission('OPERATIONS_MANAGE') || hasPermission('ALL_ACCESS');
+  const canDelete = hasPermission('OPERATIONS_MANAGE') || hasPermission('ALL_ACCESS');
 
   const [formData, setFormData] = useState<Partial<WeaponItem>>({
     serialNumber: '',
@@ -38,22 +47,82 @@ export const WeaponsLedgerView: React.FC = () => {
   const [selectedGuardId, setSelectedGuardId] = useState(guards[0]?.id || '');
   const [selectedSiteId, setSelectedSiteId] = useState(securitySites[0]?.id || '');
 
+  const handleOpenRegister = () => {
+    setEditingWeapon(null);
+    setFormData({
+      serialNumber: '',
+      type: 'Shotgun',
+      makeModel: 'Pump Action 12GA',
+      caliber: '12 Bore',
+      licenseNumber: 'LIC-MOI-2025-1099',
+      licenseExpiry: '2027-12-31',
+      ammunitionRounds: 25,
+      status: 'IN_ARMORY',
+    });
+    setIsAddModalOpen(true);
+  };
+
+  const handleOpenEdit = (w: WeaponItem) => {
+    setEditingWeapon(w);
+    setFormData({
+      serialNumber: w.serialNumber,
+      type: w.type,
+      makeModel: w.makeModel,
+      caliber: w.caliber,
+      licenseNumber: w.licenseNumber,
+      licenseExpiry: w.licenseExpiry,
+      ammunitionRounds: w.ammunitionRounds,
+      status: w.status,
+    });
+    setIsAddModalOpen(true);
+  };
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.serialNumber) return;
 
-    createWeapon({
-      serialNumber: formData.serialNumber,
-      type: formData.type || 'Shotgun',
-      makeModel: formData.makeModel || '12GA Shotgun',
-      caliber: formData.caliber || '12 Bore',
-      licenseNumber: formData.licenseNumber || 'LIC-2026',
-      licenseExpiry: formData.licenseExpiry || '2027-12-31',
-      ammunitionRounds: Number(formData.ammunitionRounds) || 20,
-      status: 'IN_ARMORY',
-    });
+    if (editingWeapon) {
+      const res = updateWeaponItem(editingWeapon.id, {
+        serialNumber: formData.serialNumber,
+        type: formData.type || 'Shotgun',
+        makeModel: formData.makeModel || '12GA Shotgun',
+        caliber: formData.caliber || '12 Bore',
+        licenseNumber: formData.licenseNumber || 'LIC-2026',
+        licenseExpiry: formData.licenseExpiry || '2027-12-31',
+        ammunitionRounds: Number(formData.ammunitionRounds) || 20,
+        status: formData.status || 'IN_ARMORY',
+      });
+      if (res.success) {
+        addToast(`Firearm ${formData.serialNumber} updated successfully`, 'success');
+      } else {
+        addToast(res.error || 'Failed to update firearm', 'error');
+      }
+    } else {
+      createWeapon({
+        serialNumber: formData.serialNumber,
+        type: formData.type || 'Shotgun',
+        makeModel: formData.makeModel || '12GA Shotgun',
+        caliber: formData.caliber || '12 Bore',
+        licenseNumber: formData.licenseNumber || 'LIC-2026',
+        licenseExpiry: formData.licenseExpiry || '2027-12-31',
+        ammunitionRounds: Number(formData.ammunitionRounds) || 20,
+        status: 'IN_ARMORY',
+      });
+      addToast(`Firearm ${formData.serialNumber} registered into vault`, 'success');
+    }
 
     setIsAddModalOpen(false);
+    setEditingWeapon(null);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deletingWeapon) return;
+    const res = deleteWeaponItem(deletingWeapon.id);
+    if (res.success) {
+      setDeletingWeapon(null);
+    } else {
+      addToast(res.error || 'Failed to delete firearm', 'error');
+    }
   };
 
   const handleConfirmIssue = () => {
@@ -92,7 +161,7 @@ export const WeaponsLedgerView: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setIsAddModalOpen(true)}
+            onClick={handleOpenRegister}
             className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
@@ -131,7 +200,7 @@ export const WeaponsLedgerView: React.FC = () => {
                 <th className="px-4 py-3.5 text-center">Live Ammo</th>
                 <th className="px-4 py-3.5">Current Custodian / Site</th>
                 <th className="px-4 py-3.5 text-center">Vault Status</th>
-                <th className="px-6 py-3.5 text-right">Chain of Custody</th>
+                <th className="px-6 py-3.5 text-right">Chain of Custody & Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -164,26 +233,39 @@ export const WeaponsLedgerView: React.FC = () => {
                     </span>
                   </td>
                   <td className="px-6 py-3.5 text-right">
-                    {w.status === 'IN_ARMORY' ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIssueModalWeapon(w);
-                          setSelectedGuardId(guards[0]?.id || '');
-                        }}
-                        className="px-2.5 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold rounded-lg text-[11px]"
-                      >
-                        Issue to Guard
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => returnWeapon(w.id)}
-                        className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-[11px]"
-                      >
-                        Return to Vault
-                      </button>
-                    )}
+                    <div className="flex items-center justify-end gap-2">
+                      {w.status === 'IN_ARMORY' ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIssueModalWeapon(w);
+                            setSelectedGuardId(guards[0]?.id || '');
+                          }}
+                          className="px-2.5 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold rounded-lg text-[11px]"
+                        >
+                          Issue to Guard
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => returnWeapon(w.id)}
+                          className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-[11px]"
+                        >
+                          Return to Vault
+                        </button>
+                      )}
+                      <RowActionButtons
+                        size="sm"
+                        canEdit={canEdit}
+                        canDelete={canDelete && w.status !== 'ISSUED'}
+                        onView={() => setDetailWeapon(w)}
+                        onEdit={() => handleOpenEdit(w)}
+                        onDelete={() => setDeletingWeapon(w)}
+                        viewTooltip="View weapon dossier"
+                        editTooltip="Edit firearm specs"
+                        deleteTooltip={w.status === 'ISSUED' ? 'Cannot delete issued firearm' : 'Delete firearm from armory'}
+                      />
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -192,15 +274,15 @@ export const WeaponsLedgerView: React.FC = () => {
         </div>
       </div>
 
-      {/* Add Firearm Modal */}
+      {/* Add / Edit Firearm Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
           <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95">
             <div className="bg-slate-900 px-6 py-4 text-white flex items-center justify-between">
               <h3 className="font-extrabold text-base tracking-tight font-['Space_Grotesk']">
-                Register New Firearm into Armory
+                {editingWeapon ? `Edit Firearm (${editingWeapon.serialNumber})` : 'Register New Firearm into Armory'}
               </h3>
-              <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => { setIsAddModalOpen(false); setEditingWeapon(null); }} className="text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -281,7 +363,7 @@ export const WeaponsLedgerView: React.FC = () => {
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
                 <button
                   type="button"
-                  onClick={() => setIsAddModalOpen(false)}
+                  onClick={() => { setIsAddModalOpen(false); setEditingWeapon(null); }}
                   className="px-4 py-2 font-semibold text-slate-600 hover:text-slate-900 rounded-xl"
                 >
                   Cancel
@@ -290,7 +372,7 @@ export const WeaponsLedgerView: React.FC = () => {
                   type="submit"
                   className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-xs transition-all"
                 >
-                  Save to Vault
+                  {editingWeapon ? 'Save Changes' : 'Save to Vault'}
                 </button>
               </div>
             </form>
@@ -361,6 +443,57 @@ export const WeaponsLedgerView: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Delete Weapon Confirmation Modal */}
+      {deletingWeapon && (
+        <DeleteConfirmationModal
+          isOpen={!!deletingWeapon}
+          onClose={() => setDeletingWeapon(null)}
+          onConfirm={handleConfirmDelete}
+          recordTitle={`${deletingWeapon.serialNumber} (${deletingWeapon.makeModel})`}
+          recordId={deletingWeapon.serialNumber}
+          moduleName="Firearms Ledger"
+          warningMessage="Deleting this firearm permanently removes it from the inventory ledger. This action is audited and cannot be undone."
+        />
+      )}
+
+      {/* Record Detail Modal */}
+      {detailWeapon && (
+        <RecordDetailModal
+          isOpen={!!detailWeapon}
+          onClose={() => setDetailWeapon(null)}
+          title={detailWeapon.serialNumber}
+          subtitle={`${detailWeapon.type} • ${detailWeapon.makeModel}`}
+          badge={{
+            text: detailWeapon.status,
+            variant: detailWeapon.status === 'IN_ARMORY' ? 'emerald' : 'purple',
+          }}
+          onEdit={() => {
+            const w = detailWeapon;
+            setDetailWeapon(null);
+            handleOpenEdit(w);
+          }}
+          onDelete={() => {
+            const w = detailWeapon;
+            setDetailWeapon(null);
+            setDeletingWeapon(w);
+          }}
+          canEdit={canEdit}
+          canDelete={canDelete && detailWeapon.status !== 'ISSUED'}
+          fields={[
+            { label: 'Serial Number', value: detailWeapon.serialNumber, isMono: true },
+            { label: 'Weapon Classification', value: detailWeapon.type },
+            { label: 'Make & Model', value: detailWeapon.makeModel },
+            { label: 'Bore / Caliber', value: detailWeapon.caliber, isMono: true },
+            { label: 'MOI License Number', value: detailWeapon.licenseNumber, isMono: true },
+            { label: 'MOI License Expiry', value: detailWeapon.licenseExpiry, isMono: true },
+            { label: 'Live Ammunition Stock', value: `${detailWeapon.ammunitionRounds} Live Rounds`, isMono: true },
+            { label: 'Vault Custody Status', value: detailWeapon.status },
+            { label: 'Issued Guard Custodian', value: detailWeapon.assignedGuardName || 'None (Vault Protected)' },
+            { label: 'Assigned Protected Post', value: detailWeapon.assignedSiteName || 'Central Armory Depot' },
+          ]}
+        />
       )}
     </div>
   );

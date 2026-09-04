@@ -16,14 +16,23 @@ import {
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { UniformItem } from '../../types';
+import { RowActionButtons } from '../common/RowActionButtons';
+import { DeleteConfirmationModal } from '../common/DeleteConfirmationModal';
+import { RecordDetailModal } from '../common/RecordDetailModal';
 
 export const UniformsStockView: React.FC = () => {
-  const { company, uniformStock, guards, createUniformItem, issueUniformToGuard } = useERP();
+  const { company, uniformStock, guards, createUniformItem, updateUniformItem, deleteUniformItem, issueUniformToGuard, hasPermission, addToast } = useERP();
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<UniformItem | null>(null);
+  const [deletingItem, setDeletingItem] = useState<UniformItem | null>(null);
+  const [detailItem, setDetailItem] = useState<UniformItem | null>(null);
   const [issueModalItem, setIssueModalItem] = useState<UniformItem | null>(null);
   const [selectedGuardId, setSelectedGuardId] = useState(guards[0]?.id || '');
   const [issueQty, setIssueQty] = useState(1);
+
+  const canEdit = hasPermission('INVENTORY_MANAGE') || hasPermission('ALL_ACCESS');
+  const canDelete = hasPermission('INVENTORY_MANAGE') || hasPermission('ALL_ACCESS');
 
   const [formData, setFormData] = useState<Partial<UniformItem>>({
     itemCode: '',
@@ -35,24 +44,81 @@ export const UniformsStockView: React.FC = () => {
     costPerUnit: 1200,
   });
 
+  const handleOpenAdd = () => {
+    setEditingItem(null);
+    setFormData({
+      itemCode: '',
+      name: '',
+      category: 'Uniform',
+      size: 'Standard',
+      inStockQuantity: 50,
+      reorderLevel: 15,
+      costPerUnit: 1200,
+    });
+    setIsAddModalOpen(true);
+  };
+
+  const handleOpenEdit = (item: UniformItem) => {
+    setEditingItem(item);
+    setFormData({
+      itemCode: item.itemCode,
+      name: item.name,
+      category: item.category,
+      size: item.size,
+      inStockQuantity: item.inStockQuantity,
+      reorderLevel: item.reorderLevel,
+      costPerUnit: item.costPerUnit,
+    });
+    setIsAddModalOpen(true);
+  };
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name) return;
 
-    const count = uniformStock.length + 1;
-    const itemCode = formData.itemCode || `UNI-${String(count).padStart(3, '0')}`;
+    if (editingItem) {
+      const res = updateUniformItem(editingItem.id, {
+        itemCode: formData.itemCode || editingItem.itemCode,
+        name: formData.name,
+        category: formData.category || 'Uniform',
+        size: formData.size || 'Standard',
+        inStockQuantity: Number(formData.inStockQuantity) || 0,
+        reorderLevel: Number(formData.reorderLevel) || 10,
+        costPerUnit: Number(formData.costPerUnit) || 1000,
+      });
+      if (res.success) {
+        addToast(`Uniform item ${formData.name} updated successfully`, 'success');
+      } else {
+        addToast(res.error || 'Failed to update item', 'error');
+      }
+    } else {
+      const count = uniformStock.length + 1;
+      const itemCode = formData.itemCode || `UNI-${String(count).padStart(3, '0')}`;
 
-    createUniformItem({
-      itemCode,
-      name: formData.name || '',
-      category: formData.category || 'Uniform',
-      size: formData.size || 'Standard',
-      inStockQuantity: Number(formData.inStockQuantity) || 20,
-      reorderLevel: Number(formData.reorderLevel) || 10,
-      costPerUnit: Number(formData.costPerUnit) || 1000,
-    });
+      createUniformItem({
+        itemCode,
+        name: formData.name || '',
+        category: formData.category || 'Uniform',
+        size: formData.size || 'Standard',
+        inStockQuantity: Number(formData.inStockQuantity) || 20,
+        reorderLevel: Number(formData.reorderLevel) || 10,
+        costPerUnit: Number(formData.costPerUnit) || 1000,
+      });
+      addToast(`Item SKU ${itemCode} added to inventory`, 'success');
+    }
 
     setIsAddModalOpen(false);
+    setEditingItem(null);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deletingItem) return;
+    const res = deleteUniformItem(deletingItem.id);
+    if (res.success) {
+      setDeletingItem(null);
+    } else {
+      addToast(res.error || 'Failed to delete item', 'error');
+    }
   };
 
   const handleConfirmIssue = () => {
@@ -84,7 +150,7 @@ export const UniformsStockView: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setIsAddModalOpen(true)}
+            onClick={handleOpenAdd}
             className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
@@ -155,33 +221,46 @@ export const UniformsStockView: React.FC = () => {
                 <span className="text-xs text-slate-400 font-mono">
                   Reorder at &le; {item.reorderLevel}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIssueModalItem(item);
-                    setSelectedGuardId(guards[0]?.id || '');
-                    setIssueQty(1);
-                  }}
-                  disabled={item.inStockQuantity <= 0}
-                  className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all"
-                >
-                  Issue to Guard
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIssueModalItem(item);
+                      setSelectedGuardId(guards[0]?.id || '');
+                      setIssueQty(1);
+                    }}
+                    disabled={item.inStockQuantity <= 0}
+                    className="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all"
+                  >
+                    Issue
+                  </button>
+                  <RowActionButtons
+                    size="sm"
+                    canEdit={canEdit}
+                    canDelete={canDelete}
+                    onView={() => setDetailItem(item)}
+                    onEdit={() => handleOpenEdit(item)}
+                    onDelete={() => setDeletingItem(item)}
+                    viewTooltip="View SKU details"
+                    editTooltip="Edit inventory item"
+                    deleteTooltip="Delete item SKU"
+                  />
+                </div>
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Add Item Modal */}
+      {/* Add / Edit Item Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
           <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95">
             <div className="bg-slate-900 px-6 py-4 text-white flex items-center justify-between">
               <h3 className="font-extrabold text-base tracking-tight font-['Space_Grotesk']">
-                Add Uniform / Tactical Equipment SKU
+                {editingItem ? `Edit Item SKU (${editingItem.itemCode})` : 'Add Uniform / Tactical Equipment SKU'}
               </h3>
-              <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => { setIsAddModalOpen(false); setEditingItem(null); }} className="text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -271,7 +350,7 @@ export const UniformsStockView: React.FC = () => {
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
                 <button
                   type="button"
-                  onClick={() => setIsAddModalOpen(false)}
+                  onClick={() => { setIsAddModalOpen(false); setEditingItem(null); }}
                   className="px-4 py-2 font-semibold text-slate-600 hover:text-slate-900 rounded-xl"
                 >
                   Cancel
@@ -280,7 +359,7 @@ export const UniformsStockView: React.FC = () => {
                   type="submit"
                   className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-xs transition-all"
                 >
-                  Save Item SKU
+                  {editingItem ? 'Save Changes' : 'Save Item SKU'}
                 </button>
               </div>
             </form>
@@ -346,6 +425,55 @@ export const UniformsStockView: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Delete Item Confirmation Modal */}
+      {deletingItem && (
+        <DeleteConfirmationModal
+          isOpen={!!deletingItem}
+          onClose={() => setDeletingItem(null)}
+          onConfirm={handleConfirmDelete}
+          recordTitle={`${deletingItem.itemCode} - ${deletingItem.name}`}
+          recordId={deletingItem.itemCode}
+          moduleName="Uniforms & Gear Inventory"
+          warningMessage="Deleting this SKU will remove its inventory record and tracking history from the system."
+        />
+      )}
+
+      {/* Record Detail Modal */}
+      {detailItem && (
+        <RecordDetailModal
+          isOpen={!!detailItem}
+          onClose={() => setDetailItem(null)}
+          title={detailItem.name}
+          subtitle={`SKU: ${detailItem.itemCode} • Category: ${detailItem.category}`}
+          badge={{
+            text: detailItem.inStockQuantity <= detailItem.reorderLevel ? 'LOW STOCK' : 'IN STOCK',
+            variant: detailItem.inStockQuantity <= detailItem.reorderLevel ? 'rose' : 'emerald',
+          }}
+          onEdit={() => {
+            const item = detailItem;
+            setDetailItem(null);
+            handleOpenEdit(item);
+          }}
+          onDelete={() => {
+            const item = detailItem;
+            setDetailItem(null);
+            setDeletingItem(item);
+          }}
+          canEdit={canEdit}
+          canDelete={canDelete}
+          fields={[
+            { label: 'Item Code / SKU', value: detailItem.itemCode, isMono: true },
+            { label: 'Item Name', value: detailItem.name },
+            { label: 'Inventory Category', value: detailItem.category },
+            { label: 'Standard Size', value: detailItem.size },
+            { label: 'Current In-Stock', value: `${detailItem.inStockQuantity} units`, isMono: true },
+            { label: 'Reorder Alert Threshold', value: `${detailItem.reorderLevel} units`, isMono: true },
+            { label: 'Unit Purchase Cost', value: `${company.currencySymbol} ${detailItem.costPerUnit.toLocaleString()}`, isMono: true },
+            { label: 'Total Inventory Valuation', value: `${company.currencySymbol} ${(detailItem.inStockQuantity * detailItem.costPerUnit).toLocaleString()}`, isMono: true, fullWidth: true },
+          ]}
+        />
       )}
     </div>
   );

@@ -17,11 +17,20 @@ import {
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { GuardAssignment } from '../../types';
+import { RowActionButtons } from '../common/RowActionButtons';
+import { DeleteConfirmationModal } from '../common/DeleteConfirmationModal';
+import { RecordDetailModal } from '../common/RecordDetailModal';
 
 export const GuardAssignmentsView: React.FC = () => {
-  const { guards, securitySites, guardAssignments, createGuardAssignment } = useERP();
+  const { guards, securitySites, guardAssignments, createGuardAssignment, updateGuardAssignment, deleteGuardAssignment, hasPermission, addToast } = useERP();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingAssignment, setEditingAssignment] = useState<GuardAssignment | null>(null);
+  const [deletingAssignment, setDeletingAssignment] = useState<GuardAssignment | null>(null);
+  const [detailAssignment, setDetailAssignment] = useState<GuardAssignment | null>(null);
+
+  const canEdit = hasPermission('OPERATIONS_MANAGE') || hasPermission('ALL_ACCESS');
+  const canDelete = hasPermission('OPERATIONS_MANAGE') || hasPermission('ALL_ACCESS');
 
   const [formData, setFormData] = useState<Partial<GuardAssignment>>({
     guardId: guards[0]?.id || '',
@@ -32,32 +41,95 @@ export const GuardAssignmentsView: React.FC = () => {
     status: 'ACTIVE',
   });
 
+  const handleOpenCreate = () => {
+    setEditingAssignment(null);
+    setFormData({
+      guardId: guards[0]?.id || '',
+      siteId: securitySites[0]?.id || '',
+      shift: 'DAY',
+      postDesignation: 'Main Security Gate #1',
+      startDate: '2026-09-01',
+      status: 'ACTIVE',
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (asg: GuardAssignment) => {
+    setEditingAssignment(asg);
+    setFormData({
+      guardId: asg.guardId || asg.employeeId,
+      siteId: asg.siteId,
+      shift: asg.shift || (asg.shiftName?.includes('NIGHT') ? 'NIGHT' : 'DAY'),
+      postDesignation: asg.postDesignation || asg.employeeType || '',
+      startDate: asg.startDate || '',
+      status: asg.status || 'ACTIVE',
+    });
+    setIsModalOpen(true);
+  };
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     const selectedGuard = guards.find((g) => g.id === formData.guardId) || guards[0];
     const selectedSite = securitySites.find((s) => s.id === formData.siteId) || securitySites[0];
 
-    createGuardAssignment({
-      guardId: selectedGuard.id,
-      guardName: selectedGuard.fullName,
-      employeeId: selectedGuard.id,
-      employeeCode: (selectedGuard as any).employeeCode || (selectedGuard as any).guardCode || 'MSS-001',
-      employeeName: selectedGuard.fullName,
-      employeeType: 'Security Guard',
-      clientId: selectedSite?.clientId || 'cli-001',
-      clientName: selectedSite?.clientName || 'General Client',
-      siteId: selectedSite.id,
-      siteName: selectedSite.name,
-      shiftId: formData.shift || 'DAY',
-      shiftName: formData.shift === 'NIGHT' ? 'Night Shift (12h)' : 'Day Shift (12h)',
-      shift: formData.shift || 'DAY',
-      supervisorName: 'Command Area Supervisor',
-      postDesignation: formData.postDesignation || 'Main Post',
-      startDate: formData.startDate || '2026-09-01',
-      status: 'ACTIVE',
-    } as any);
+    if (editingAssignment) {
+      const res = updateGuardAssignment(editingAssignment.id, {
+        guardId: selectedGuard.id,
+        guardName: selectedGuard.fullName,
+        employeeId: selectedGuard.id,
+        employeeCode: (selectedGuard as any).employeeCode || (selectedGuard as any).guardCode || 'MSS-001',
+        employeeName: selectedGuard.fullName,
+        clientId: selectedSite?.clientId || 'cli-001',
+        clientName: selectedSite?.clientName || 'General Client',
+        siteId: selectedSite.id,
+        siteName: selectedSite.name,
+        shiftId: formData.shift || 'DAY',
+        shiftName: formData.shift === 'NIGHT' ? 'Night Shift (12h)' : 'Day Shift (12h)',
+        shift: formData.shift || 'DAY',
+        postDesignation: formData.postDesignation || 'Main Post',
+        startDate: formData.startDate || '2026-09-01',
+        status: formData.status as any || 'ACTIVE',
+      } as any);
+
+      if (res.success) {
+        addToast(`Assignment for ${selectedGuard.fullName} updated`, 'success');
+      } else {
+        addToast(res.error || 'Failed to update assignment', 'error');
+      }
+    } else {
+      createGuardAssignment({
+        guardId: selectedGuard.id,
+        guardName: selectedGuard.fullName,
+        employeeId: selectedGuard.id,
+        employeeCode: (selectedGuard as any).employeeCode || (selectedGuard as any).guardCode || 'MSS-001',
+        employeeName: selectedGuard.fullName,
+        employeeType: 'Security Guard',
+        clientId: selectedSite?.clientId || 'cli-001',
+        clientName: selectedSite?.clientName || 'General Client',
+        siteId: selectedSite.id,
+        siteName: selectedSite.name,
+        shiftId: formData.shift || 'DAY',
+        shiftName: formData.shift === 'NIGHT' ? 'Night Shift (12h)' : 'Day Shift (12h)',
+        shift: formData.shift || 'DAY',
+        supervisorName: 'Command Area Supervisor',
+        postDesignation: formData.postDesignation || 'Main Post',
+        startDate: formData.startDate || '2026-09-01',
+        status: 'ACTIVE',
+      } as any);
+    }
 
     setIsModalOpen(false);
+    setEditingAssignment(null);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deletingAssignment) return;
+    const res = deleteGuardAssignment(deletingAssignment.id);
+    if (res.success) {
+      setDeletingAssignment(null);
+    } else {
+      addToast(res.error || 'Failed to delete assignment', 'error');
+    }
   };
 
   const filteredAssignments = guardAssignments.filter((a) => {
@@ -89,7 +161,7 @@ export const GuardAssignmentsView: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setIsModalOpen(true)}
+            onClick={handleOpenCreate}
             className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
@@ -110,6 +182,7 @@ export const GuardAssignmentsView: React.FC = () => {
                 <th className="px-4 py-3.5">Post Designation</th>
                 <th className="px-4 py-3.5">Effective Date</th>
                 <th className="px-6 py-3.5 text-center">Status</th>
+                <th className="px-6 py-3.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -132,6 +205,21 @@ export const GuardAssignmentsView: React.FC = () => {
                       {a.status}
                     </span>
                   </td>
+                  <td className="px-6 py-3.5 text-right">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <RowActionButtons
+                        size="sm"
+                        canEdit={canEdit}
+                        canDelete={canDelete}
+                        onView={() => setDetailAssignment(a)}
+                        onEdit={() => handleOpenEdit(a)}
+                        onDelete={() => setDeletingAssignment(a)}
+                        viewTooltip="View assignment details"
+                        editTooltip="Edit assignment"
+                        deleteTooltip="Remove deployment"
+                      />
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -145,9 +233,9 @@ export const GuardAssignmentsView: React.FC = () => {
           <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95">
             <div className="bg-slate-900 px-6 py-4 text-white flex items-center justify-between">
               <h3 className="font-extrabold text-base tracking-tight font-['Space_Grotesk']">
-                Deploy Security Guard to Site Post
+                {editingAssignment ? 'Edit Guard Post Deployment' : 'Deploy Security Guard to Site Post'}
               </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => { setIsModalOpen(false); setEditingAssignment(null); }} className="text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -222,7 +310,7 @@ export const GuardAssignmentsView: React.FC = () => {
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => { setIsModalOpen(false); setEditingAssignment(null); }}
                   className="px-4 py-2 font-semibold text-slate-600 hover:text-slate-900 rounded-xl"
                 >
                   Cancel
@@ -231,12 +319,62 @@ export const GuardAssignmentsView: React.FC = () => {
                   type="submit"
                   className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-xs transition-all"
                 >
-                  Confirm Deployment
+                  {editingAssignment ? 'Save Changes' : 'Confirm Deployment'}
                 </button>
               </div>
             </form>
           </div>
         </div>
+      )}
+
+      {/* Delete / Remove Deployment Modal */}
+      {deletingAssignment && (
+        <DeleteConfirmationModal
+          isOpen={!!deletingAssignment}
+          onClose={() => setDeletingAssignment(null)}
+          onConfirm={handleConfirmDelete}
+          recordTitle={`${deletingAssignment.guardName || deletingAssignment.employeeName} at ${deletingAssignment.siteName}`}
+          recordId={deletingAssignment.assignmentNumber || deletingAssignment.id}
+          moduleName="Guard Post Deployments"
+          warningMessage="Removing this deployment will unassign the guard from this physical site and shift post."
+        />
+      )}
+
+      {/* Record Detail Modal */}
+      {detailAssignment && (
+        <RecordDetailModal
+          isOpen={!!detailAssignment}
+          onClose={() => setDetailAssignment(null)}
+          title={detailAssignment.guardName || detailAssignment.employeeName}
+          subtitle={`Posting: ${detailAssignment.siteName} | Shift: ${detailAssignment.shift || detailAssignment.shiftName || 'DAY'}`}
+          badge={{
+            text: detailAssignment.status || 'ACTIVE',
+            variant: detailAssignment.status === 'ACTIVE' ? 'emerald' : 'slate',
+          }}
+          onEdit={() => {
+            const a = detailAssignment;
+            setDetailAssignment(null);
+            handleOpenEdit(a);
+          }}
+          onDelete={() => {
+            const a = detailAssignment;
+            setDetailAssignment(null);
+            setDeletingAssignment(a);
+          }}
+          canEdit={canEdit}
+          canDelete={canDelete}
+          fields={[
+            { label: 'Guard Personnel', value: detailAssignment.guardName || detailAssignment.employeeName },
+            { label: 'Personnel Code', value: (detailAssignment as any).employeeCode || (detailAssignment as any).guardCode || 'MSS-G', isMono: true },
+            { label: 'Client / Organization', value: detailAssignment.clientName || 'General Client' },
+            { label: 'Protected Security Site', value: detailAssignment.siteName },
+            { label: 'Shift Duty', value: `${detailAssignment.shift || detailAssignment.shiftName || 'DAY'} SHIFT (12-Hour Roster)` },
+            { label: 'Post Designation / Orders', value: detailAssignment.postDesignation || 'Main Post', fullWidth: true },
+            { label: 'Deployment Start Date', value: detailAssignment.startDate, isMono: true },
+            { label: 'Supervising Field Officer', value: (detailAssignment as any).supervisorName || 'Command Area Supervisor' },
+            { label: 'Status', value: detailAssignment.status || 'ACTIVE' },
+          ]}
+        />
       )}
     </div>
   );

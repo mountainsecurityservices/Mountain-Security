@@ -18,12 +18,21 @@ import {
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { Guard } from '../../types';
+import { RowActionButtons } from '../common/RowActionButtons';
+import { DeleteConfirmationModal } from '../common/DeleteConfirmationModal';
+import { RecordDetailModal } from '../common/RecordDetailModal';
 
 export const GuardsRosterView: React.FC = () => {
-  const { guards, createGuard } = useERP();
+  const { guards, createGuard, updateGuard, deleteGuard, hasPermission, addToast } = useERP();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterArmed, setFilterArmed] = useState('ALL');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingGuard, setEditingGuard] = useState<Guard | null>(null);
+  const [deletingGuard, setDeletingGuard] = useState<Guard | null>(null);
+  const [detailGuard, setDetailGuard] = useState<Guard | null>(null);
+
+  const canEdit = hasPermission('GUARDS_EDIT') || hasPermission('OPERATIONS_MANAGE') || hasPermission('ALL_ACCESS');
+  const canDelete = hasPermission('GUARDS_DELETE') || hasPermission('OPERATIONS_MANAGE') || hasPermission('ALL_ACCESS');
 
   const [formData, setFormData] = useState<Partial<Guard>>({
     fullName: '',
@@ -38,29 +47,91 @@ export const GuardsRosterView: React.FC = () => {
     status: 'ACTIVE',
   });
 
+  const handleOpenCreate = () => {
+    setEditingGuard(null);
+    setFormData({
+      fullName: '',
+      cnic: '',
+      phone: '',
+      emergencyContact: '',
+      rank: 'Security Guard',
+      isArmedAuthorized: false,
+      weaponLicenseNumber: '',
+      monthlyBasicSalary: 32000,
+      allowances: 3000,
+      status: 'ACTIVE',
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (guard: Guard) => {
+    setEditingGuard(guard);
+    setFormData({
+      fullName: guard.fullName,
+      cnic: guard.cnic || guard.cnicOrNationalId || '',
+      phone: guard.phone || '',
+      emergencyContact: guard.emergencyContact || '',
+      rank: guard.rank || guard.designation || guard.employeeType || 'Security Guard',
+      isArmedAuthorized: guard.isArmedAuthorized || false,
+      weaponLicenseNumber: guard.weaponLicenseNumber || guard.gunLicenseNumber || '',
+      monthlyBasicSalary: guard.monthlyBasicSalary || 32000,
+      allowances: guard.allowances || 0,
+      status: guard.status || 'ACTIVE',
+    });
+    setIsModalOpen(true);
+  };
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.fullName || !formData.cnic) return;
 
-    const count = guards.length + 1;
-    const guardCode = `MSS-G-${String(count).padStart(3, '0')}`;
+    if (editingGuard) {
+      updateGuard(editingGuard.id, {
+        fullName: formData.fullName,
+        cnicOrNationalId: formData.cnic,
+        phone: formData.phone,
+        emergencyContact: formData.emergencyContact,
+        designation: formData.rank,
+        isArmedAuthorized: formData.isArmedAuthorized,
+        gunLicenseNumber: formData.weaponLicenseNumber,
+        monthlyBasicSalary: Number(formData.monthlyBasicSalary) || 32000,
+        allowances: Number(formData.allowances) || 0,
+        status: formData.status as any || 'ACTIVE',
+      });
+      addToast(`Guard '${formData.fullName}' updated successfully`, 'success');
+    } else {
+      const count = guards.length + 1;
+      const guardCode = `MSS-G-${String(count).padStart(3, '0')}`;
 
-    createGuard({
-      guardCode,
-      fullName: formData.fullName || '',
-      cnic: formData.cnic || '',
-      phone: formData.phone || '',
-      emergencyContact: formData.emergencyContact || '',
-      rank: formData.rank || 'Security Guard',
-      joinDate: new Date().toISOString().substring(0, 10),
-      isArmedAuthorized: formData.isArmedAuthorized || false,
-      weaponLicenseNumber: formData.weaponLicenseNumber || '',
-      monthlyBasicSalary: Number(formData.monthlyBasicSalary) || 32000,
-      allowances: Number(formData.allowances) || 0,
-      status: 'ACTIVE',
-    });
+      createGuard({
+        guardCode,
+        fullName: formData.fullName || '',
+        cnic: formData.cnic || '',
+        phone: formData.phone || '',
+        emergencyContact: formData.emergencyContact || '',
+        rank: formData.rank || 'Security Guard',
+        joinDate: new Date().toISOString().substring(0, 10),
+        isArmedAuthorized: formData.isArmedAuthorized || false,
+        weaponLicenseNumber: formData.weaponLicenseNumber || '',
+        monthlyBasicSalary: Number(formData.monthlyBasicSalary) || 32000,
+        allowances: Number(formData.allowances) || 0,
+        status: 'ACTIVE',
+      });
+      addToast(`Guard personnel '${formData.fullName}' enlisted successfully`, 'success');
+    }
 
     setIsModalOpen(false);
+    setEditingGuard(null);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deletingGuard) return;
+    const res = deleteGuard(deletingGuard.id, true); // Archive
+    if (res.success) {
+      setDeletingGuard(null);
+    } else {
+      addToast(res.error || 'Failed to archive guard', 'error');
+    }
   };
 
   const filteredGuards = guards.filter((g) => {
@@ -95,7 +166,7 @@ export const GuardsRosterView: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setIsModalOpen(true)}
+            onClick={handleOpenCreate}
             className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
@@ -152,15 +223,28 @@ export const GuardsRosterView: React.FC = () => {
                 </div>
               </div>
 
-              {guard.isArmedAuthorized ? (
-                <span className="px-2 py-0.5 rounded font-mono font-bold text-[10px] bg-red-100 text-red-800">
-                  ARMED
-                </span>
-              ) : (
-                <span className="px-2 py-0.5 rounded font-mono font-bold text-[10px] bg-slate-100 text-slate-700">
-                  UNARMED
-                </span>
-              )}
+              <div className="flex items-center gap-1.5">
+                {guard.isArmedAuthorized ? (
+                  <span className="px-2 py-0.5 rounded font-mono font-bold text-[10px] bg-red-100 text-red-800">
+                    ARMED
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded font-mono font-bold text-[10px] bg-slate-100 text-slate-700">
+                    UNARMED
+                  </span>
+                )}
+                <RowActionButtons
+                  size="sm"
+                  canEdit={canEdit}
+                  canDelete={canDelete}
+                  onView={() => setDetailGuard(guard)}
+                  onEdit={() => handleOpenEdit(guard)}
+                  onDelete={() => setDeletingGuard(guard)}
+                  viewTooltip={`View ${guard.fullName} credentials`}
+                  editTooltip={`Edit ${guard.fullName}`}
+                  deleteTooltip={`Archive ${guard.fullName}`}
+                />
+              </div>
             </div>
 
             <div className="space-y-1.5 text-xs text-slate-600 pt-2 border-t border-slate-100">
@@ -194,15 +278,15 @@ export const GuardsRosterView: React.FC = () => {
         ))}
       </div>
 
-      {/* Enlist Guard Modal */}
+      {/* Enlist / Edit Guard Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
           <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95">
             <div className="bg-slate-900 px-6 py-4 text-white flex items-center justify-between">
               <h3 className="font-extrabold text-base tracking-tight font-['Space_Grotesk']">
-                Enlist New Security Guard Personnel
+                {editingGuard ? `Edit Guard (${editingGuard.guardCode || editingGuard.employeeCode})` : 'Enlist New Security Guard Personnel'}
               </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => { setIsModalOpen(false); setEditingGuard(null); }} className="text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -313,7 +397,7 @@ export const GuardsRosterView: React.FC = () => {
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => { setIsModalOpen(false); setEditingGuard(null); }}
                   className="px-4 py-2 font-semibold text-slate-600 hover:text-slate-900 rounded-xl"
                 >
                   Cancel
@@ -322,12 +406,65 @@ export const GuardsRosterView: React.FC = () => {
                   type="submit"
                   className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-xs transition-all"
                 >
-                  Enlist Guard
+                  {editingGuard ? 'Save Changes' : 'Enlist Guard'}
                 </button>
               </div>
             </form>
           </div>
         </div>
+      )}
+
+      {/* Archive / Delete Guard Modal */}
+      {deletingGuard && (
+        <DeleteConfirmationModal
+          isOpen={!!deletingGuard}
+          onClose={() => setDeletingGuard(null)}
+          onConfirm={handleConfirmDelete}
+          recordTitle={`${deletingGuard.fullName} (${deletingGuard.guardCode || deletingGuard.employeeCode})`}
+          recordId={deletingGuard.guardCode || deletingGuard.employeeCode}
+          moduleName="Guards Roster"
+          warningMessage="Archiving this guard will mark them as INACTIVE and retain their historic payroll, attendance, and deployment logs."
+        />
+      )}
+
+      {/* Record Detail Modal */}
+      {detailGuard && (
+        <RecordDetailModal
+          isOpen={!!detailGuard}
+          onClose={() => setDetailGuard(null)}
+          title={detailGuard.fullName}
+          subtitle={`Personnel Code: ${detailGuard.guardCode || detailGuard.employeeCode} | ${detailGuard.rank || detailGuard.designation || 'Security Officer'}`}
+          badge={{
+            text: detailGuard.isArmedAuthorized ? 'ARMED AUTHORIZED' : 'UNARMED STANDARD',
+            variant: detailGuard.isArmedAuthorized ? 'red' : 'slate',
+          }}
+          onEdit={() => {
+            const g = detailGuard;
+            setDetailGuard(null);
+            handleOpenEdit(g);
+          }}
+          onDelete={() => {
+            const g = detailGuard;
+            setDetailGuard(null);
+            setDeletingGuard(g);
+          }}
+          canEdit={canEdit}
+          canDelete={canDelete}
+          fields={[
+            { label: 'Personnel Code', value: detailGuard.guardCode || detailGuard.employeeCode, isMono: true },
+            { label: 'Full Name', value: detailGuard.fullName },
+            { label: 'CNIC / National ID', value: detailGuard.cnic || detailGuard.cnicOrNationalId || 'N/A', isMono: true },
+            { label: 'Rank / Designation', value: detailGuard.rank || detailGuard.designation || detailGuard.employeeType || 'Security Guard' },
+            { label: 'Contact Phone', value: detailGuard.phone || 'N/A', isMono: true },
+            { label: 'Emergency Contact', value: detailGuard.emergencyContact || 'N/A' },
+            { label: 'Enlistment / Join Date', value: detailGuard.joinDate || detailGuard.joiningDate || '2026-01-01', isMono: true },
+            { label: 'Firearm Authorization', value: detailGuard.isArmedAuthorized ? 'Authorized (Armed Duty)' : 'Unarmed Standard' },
+            { label: 'Gun License #', value: detailGuard.weaponLicenseNumber || detailGuard.gunLicenseNumber || 'N/A', isMono: true },
+            { label: 'Basic Monthly Salary', value: `PKR ${(detailGuard.monthlyBasicSalary || 32000).toLocaleString()}`, isMono: true },
+            { label: 'Monthly Allowances', value: `PKR ${(detailGuard.allowances || 0).toLocaleString()}`, isMono: true },
+            { label: 'Active Deployment Status', value: detailGuard.status || 'ACTIVE' },
+          ]}
+        />
       )}
     </div>
   );

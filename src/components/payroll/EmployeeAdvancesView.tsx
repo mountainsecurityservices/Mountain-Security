@@ -16,11 +16,20 @@ import {
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { GuardAdvance } from '../../types';
+import { RowActionButtons } from '../common/RowActionButtons';
+import { DeleteConfirmationModal } from '../common/DeleteConfirmationModal';
+import { RecordDetailModal } from '../common/RecordDetailModal';
 
 export const EmployeeAdvancesView: React.FC = () => {
-  const { company, guards, guardAdvances, createGuardAdvance } = useERP();
+  const { company, guards, guardAdvances, createGuardAdvance, updateAdvance, deleteAdvance, hasPermission, addToast } = useERP();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<GuardAdvance | null>(null);
+  const [deletingItem, setDeletingItem] = useState<GuardAdvance | null>(null);
+  const [detailItem, setDetailItem] = useState<GuardAdvance | null>(null);
+
+  const canEdit = hasPermission('PAYROLL_MANAGE') || hasPermission('ALL_ACCESS');
+  const canDelete = hasPermission('PAYROLL_MANAGE') || hasPermission('ALL_ACCESS');
 
   const [formData, setFormData] = useState({
     guardId: guards[0]?.id || '',
@@ -30,29 +39,93 @@ export const EmployeeAdvancesView: React.FC = () => {
     purpose: 'Medical emergency / Family support',
   });
 
+  const handleOpenAdd = () => {
+    setEditingItem(null);
+    setFormData({
+      guardId: guards[0]?.id || '',
+      amount: 15000,
+      requestDate: new Date().toISOString().substring(0, 10),
+      monthlyRecoveryAmount: 5000,
+      purpose: 'Medical emergency / Family support',
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (adv: GuardAdvance) => {
+    setEditingItem(adv);
+    setFormData({
+      guardId: adv.guardId || guards[0]?.id || '',
+      amount: adv.amount || adv.advanceAmount || 15000,
+      requestDate: adv.requestDate || adv.sanctionDate || new Date().toISOString().substring(0, 10),
+      monthlyRecoveryAmount: adv.monthlyRecoveryAmount || adv.monthlyDeductionAmount || 5000,
+      purpose: adv.purpose || adv.reason || '',
+    });
+    setIsModalOpen(true);
+  };
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     const selectedGuard = guards.find((g) => g.id === formData.guardId) || guards[0];
 
-    createGuardAdvance({
-      guardId: selectedGuard.id,
-      guardCode: selectedGuard.guardCode || selectedGuard.employeeCode || 'MSS-GRD-0001',
-      guardName: selectedGuard.fullName,
-      amount: Number(formData.amount),
-      advanceAmount: Number(formData.amount),
-      requestDate: formData.requestDate,
-      monthlyRecoveryAmount: Number(formData.monthlyRecoveryAmount),
-      monthlyDeduction: Number(formData.monthlyRecoveryAmount),
-      recoveredAmount: 0,
-      repaidAmount: 0,
-      remainingBalance: Number(formData.amount),
-      outstandingBalance: Number(formData.amount),
-      purpose: formData.purpose,
-      reason: formData.purpose,
-      status: 'APPROVED',
-    });
+    if (editingItem) {
+      const recovered = editingItem.recoveredAmount || editingItem.repaidAmount || 0;
+      const newTotal = Number(formData.amount);
+      const remaining = Math.max(0, newTotal - recovered);
+
+      const res = updateAdvance(editingItem.id, {
+        amount: newTotal,
+        advanceAmount: newTotal,
+        requestedAmount: newTotal,
+        approvedAmount: newTotal,
+        requestDate: formData.requestDate,
+        advanceDate: formData.requestDate,
+        monthlyRecoveryAmount: Number(formData.monthlyRecoveryAmount),
+        monthlyDeduction: Number(formData.monthlyRecoveryAmount),
+        monthlyInstallmentAmount: Number(formData.monthlyRecoveryAmount),
+        remainingBalance: remaining,
+        outstandingBalance: remaining,
+        purpose: formData.purpose,
+        reason: formData.purpose,
+      } as any);
+
+      if (res.success) {
+        addToast(`Salary advance for ${editingItem.guardName || editingItem.employeeName} updated`, 'success');
+      } else {
+        addToast(res.error || 'Failed to update advance', 'error');
+      }
+    } else {
+      createGuardAdvance({
+        guardId: selectedGuard.id,
+        guardCode: selectedGuard.guardCode || selectedGuard.employeeCode || 'MSS-GRD-0001',
+        guardName: selectedGuard.fullName,
+        amount: Number(formData.amount),
+        advanceAmount: Number(formData.amount),
+        requestDate: formData.requestDate,
+        monthlyRecoveryAmount: Number(formData.monthlyRecoveryAmount),
+        monthlyDeduction: Number(formData.monthlyRecoveryAmount),
+        recoveredAmount: 0,
+        repaidAmount: 0,
+        remainingBalance: Number(formData.amount),
+        outstandingBalance: Number(formData.amount),
+        purpose: formData.purpose,
+        reason: formData.purpose,
+        status: 'APPROVED',
+      });
+      addToast(`Advance loan approved for ${selectedGuard.fullName}`, 'success');
+    }
 
     setIsModalOpen(false);
+    setEditingItem(null);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deletingItem) return;
+    const res = deleteAdvance(deletingItem.id);
+    if (res.success) {
+      setDeletingItem(null);
+    } else {
+      addToast(res.error || 'Failed to delete advance', 'error');
+    }
   };
 
   const filteredAdvances = guardAdvances.filter((a) => {
@@ -79,7 +152,7 @@ export const EmployeeAdvancesView: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setIsModalOpen(true)}
+            onClick={handleOpenAdd}
             className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
@@ -102,6 +175,7 @@ export const EmployeeAdvancesView: React.FC = () => {
                 <th className="px-4 py-3.5 text-right">Remaining Balance</th>
                 <th className="px-4 py-3.5">Purpose</th>
                 <th className="px-6 py-3.5 text-center">Status</th>
+                <th className="px-6 py-3.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -134,6 +208,18 @@ export const EmployeeAdvancesView: React.FC = () => {
                         {remaining === 0 ? 'CLEARED' : 'RECOVERING'}
                       </span>
                     </td>
+                    <td className="px-6 py-3.5 text-right">
+                      <RowActionButtons
+                        canEdit={canEdit}
+                        canDelete={canDelete}
+                        onView={() => setDetailItem(adv)}
+                        onEdit={() => handleOpenEdit(adv)}
+                        onDelete={() => setDeletingItem(adv)}
+                        viewTooltip="View advance details"
+                        editTooltip="Edit advance terms"
+                        deleteTooltip="Delete advance record"
+                      />
+                    </td>
                   </tr>
                 );
               })}
@@ -142,15 +228,15 @@ export const EmployeeAdvancesView: React.FC = () => {
         </div>
       </div>
 
-      {/* Issue Advance Modal */}
+      {/* Issue / Edit Advance Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
           <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95">
             <div className="bg-slate-900 px-6 py-4 text-white flex items-center justify-between">
               <h3 className="font-extrabold text-base tracking-tight font-['Space_Grotesk']">
-                Issue Guard Salary Advance
+                {editingItem ? 'Edit Salary Advance Record' : 'Issue Guard Salary Advance'}
               </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => { setIsModalOpen(false); setEditingItem(null); }} className="text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -159,9 +245,10 @@ export const EmployeeAdvancesView: React.FC = () => {
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Guard Personnel *</label>
                 <select
+                  disabled={!!editingItem}
                   value={formData.guardId}
                   onChange={(e) => setFormData({ ...formData, guardId: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold"
+                  className="w-full px-3 py-2 bg-slate-50 disabled:opacity-60 border border-slate-300 rounded-xl text-xs font-bold"
                 >
                   {guards.map((guard) => (
                     <option key={guard.id} value={guard.id}>
@@ -220,7 +307,7 @@ export const EmployeeAdvancesView: React.FC = () => {
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => { setIsModalOpen(false); setEditingItem(null); }}
                   className="px-4 py-2 font-semibold text-slate-600 hover:text-slate-900 rounded-xl"
                 >
                   Cancel
@@ -229,12 +316,60 @@ export const EmployeeAdvancesView: React.FC = () => {
                   type="submit"
                   className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-xs transition-all"
                 >
-                  Approve & Disburse
+                  {editingItem ? 'Save Changes' : 'Approve & Disburse'}
                 </button>
               </div>
             </form>
           </div>
         </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingItem && (
+        <DeleteConfirmationModal
+          isOpen={!!deletingItem}
+          onClose={() => setDeletingItem(null)}
+          onConfirm={handleConfirmDelete}
+          recordTitle={`${deletingItem.guardName || deletingItem.employeeName} (${company.currencySymbol} ${(deletingItem.amount || deletingItem.advanceAmount || 0).toLocaleString()})`}
+          recordId={deletingItem.id}
+          moduleName="Guard Salary Advances"
+          warningMessage="Deleting this advance record will remove it from the payroll deduction schedule."
+        />
+      )}
+
+      {/* Record Detail Modal */}
+      {detailItem && (
+        <RecordDetailModal
+          isOpen={!!detailItem}
+          onClose={() => setDetailItem(null)}
+          title={`Advance: ${detailItem.guardName || detailItem.employeeName}`}
+          subtitle={`Disbursed: ${detailItem.requestDate || detailItem.sanctionDate || 'N/A'}`}
+          badge={{
+            text: (detailItem.remainingBalance ?? ((detailItem.amount || 0) - (detailItem.recoveredAmount || 0))) === 0 ? 'CLEARED' : 'RECOVERING',
+            variant: (detailItem.remainingBalance ?? ((detailItem.amount || 0) - (detailItem.recoveredAmount || 0))) === 0 ? 'emerald' : 'amber',
+          }}
+          onEdit={() => {
+            const item = detailItem;
+            setDetailItem(null);
+            handleOpenEdit(item);
+          }}
+          onDelete={() => {
+            const item = detailItem;
+            setDetailItem(null);
+            setDeletingItem(item);
+          }}
+          canEdit={canEdit}
+          canDelete={canDelete}
+          fields={[
+            { label: 'Guard Name', value: detailItem.guardName || detailItem.employeeName || 'N/A' },
+            { label: 'Disbursement Date', value: detailItem.requestDate || detailItem.sanctionDate || 'N/A', isMono: true },
+            { label: 'Total Advance Sanctioned', value: `${company.currencySymbol} ${(detailItem.amount || detailItem.advanceAmount || 0).toLocaleString()}`, isMono: true },
+            { label: 'Monthly Deduction Amount', value: `${company.currencySymbol} ${(detailItem.monthlyRecoveryAmount || detailItem.monthlyDeductionAmount || 0).toLocaleString()}/month`, isMono: true },
+            { label: 'Recovered to Date', value: `${company.currencySymbol} ${(detailItem.recoveredAmount || detailItem.repaidAmount || 0).toLocaleString()}`, isMono: true },
+            { label: 'Outstanding Balance', value: `${company.currencySymbol} ${(detailItem.remainingBalance ?? ((detailItem.amount || 0) - (detailItem.recoveredAmount || 0))).toLocaleString()}`, isMono: true },
+            { label: 'Advance Purpose / Reason', value: detailItem.purpose || detailItem.reason || 'Emergency assistance', fullWidth: true },
+          ]}
+        />
       )}
     </div>
   );

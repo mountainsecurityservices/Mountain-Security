@@ -157,14 +157,6 @@ export const ClientInvoicesView: React.FC = () => {
       addToast(res.error || 'Failed to delete invoice', 'error');
     }
   };
-          unitPrice: formData.subtotal,
-          totalPrice: formData.subtotal,
-        },
-      ],
-    });
-
-    setIsCreateModalOpen(false);
-  };
 
   const handleConfirmPayment = () => {
     if (!paymentModalInvoice || paymentAmount <= 0) return;
@@ -536,6 +528,57 @@ export const ClientInvoicesView: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Delete / Void Invoice Confirmation Modal */}
+      {deletingInvoice && (
+        <DeleteConfirmationModal
+          isOpen={!!deletingInvoice}
+          onClose={() => setDeletingInvoice(null)}
+          onConfirm={handleConfirmDelete}
+          recordTitle={`${deletingInvoice.invoiceNumber} (${deletingInvoice.clientName})`}
+          recordId={deletingInvoice.invoiceNumber}
+          moduleName="Client Billing & Invoices"
+          warningMessage={`Voiding or deleting this invoice will cancel the outstanding receivable of ${company.currencySymbol} ${(deletingInvoice.outstandingAmount || 0).toLocaleString()}. This action is audited and logged.`}
+        />
+      )}
+
+      {/* Record Detail Modal */}
+      {detailInvoice && (
+        <RecordDetailModal
+          isOpen={!!detailInvoice}
+          onClose={() => setDetailInvoice(null)}
+          title={detailInvoice.invoiceNumber}
+          subtitle={`Client: ${detailInvoice.clientName} | Billing: ${detailInvoice.billingMonth}`}
+          badge={{
+            text: detailInvoice.status,
+            variant: detailInvoice.status === 'PAID' ? 'emerald' : detailInvoice.status === 'OVERDUE' ? 'red' : 'amber',
+          }}
+          onEdit={() => {
+            const inv = detailInvoice;
+            setDetailInvoice(null);
+            handleOpenEdit(inv);
+          }}
+          onDelete={() => {
+            const inv = detailInvoice;
+            setDetailInvoice(null);
+            setDeletingInvoice(inv);
+          }}
+          canEdit={canEdit}
+          canDelete={canDelete}
+          fields={[
+            { label: 'Invoice #', value: detailInvoice.invoiceNumber, isMono: true },
+            { label: 'Client Name', value: detailInvoice.clientName },
+            { label: 'Billing Period', value: detailInvoice.billingMonth },
+            { label: 'Issue Date', value: detailInvoice.invoiceDate, isMono: true },
+            { label: 'Payment Due Date', value: detailInvoice.dueDate, isMono: true },
+            { label: 'Subtotal Amount', value: `${company.currencySymbol} ${detailInvoice.subtotal.toLocaleString()}`, isMono: true },
+            { label: 'GST / Sales Tax', value: `${company.currencySymbol} ${detailInvoice.taxAmount.toLocaleString()}`, isMono: true },
+            { label: 'Total Invoice Value', value: `${company.currencySymbol} ${detailInvoice.totalAmount.toLocaleString()}`, isMono: true },
+            { label: 'Amount Collected', value: `${company.currencySymbol} ${(detailInvoice.paidAmount || 0).toLocaleString()}`, isMono: true },
+            { label: 'Outstanding Balance', value: `${company.currencySymbol} ${(detailInvoice.outstandingAmount || 0).toLocaleString()}`, isMono: true },
+          ]}
+        />
       )}
     </div>
   );
